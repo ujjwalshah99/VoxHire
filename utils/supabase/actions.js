@@ -50,6 +50,8 @@ export async function signUp(formData) {
     return { status: "user already exists" , user: null }
   }
 
+  
+
   revalidatePath('/', 'layout')
   return { status: "sucess" , user: result }
 }

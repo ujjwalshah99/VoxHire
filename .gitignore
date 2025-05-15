@@ -12,6 +12,7 @@
 package-lock.json
 yarn.lock
 .pnpm-lock.yaml
+package.json
 
 # testing
 /coverage
@@ -25,6 +26,7 @@ yarn.lock
 /.next/
 /out/
 .next-env
+next.config.mjs
 
 # production
 /build
@@ -95,6 +97,15 @@ next-env.d.ts
 # Generated files
 .docusaurus
 .cache-loader
+
+# Configuration files
+tailwind.config.js
+postcss.config.js
+jsconfig.json
+tsconfig.json
+.eslintrc.js
+.prettierrc
+next.config.js
 
 # Serverless
 .serverless/

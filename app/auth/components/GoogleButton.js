@@ -2,9 +2,9 @@
 
 import Button from './Button';
 
-export default function GoogleButton({ text = 'Sign in with Google' }) {
+export default function GoogleButton({ text = 'Sign in with Google', disabled = false }) {
   return (
-    <Button variant="google" className="mt-2">
+    <Button variant="google" className="mt-2" disabled={disabled}>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
         <path
           fill="#4285F4"
