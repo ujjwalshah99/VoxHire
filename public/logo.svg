@@ -1,0 +1,39 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle with Gradient -->
+  <circle cx="100" cy="100" r="90" fill="url(#paint0_radial)" />
+  
+  <!-- AI Brain Network -->
+  <path d="M100 40C75.1472 40 55 60.1472 55 85C55 109.853 75.1472 130 100 130C124.853 130 145 109.853 145 85C145 60.1472 124.853 40 100 40Z" stroke="#6EE7B7" stroke-width="3" stroke-dasharray="4 4"/>
+  
+  <!-- Calendar Icon -->
+  <rect x="70" y="90" width="60" height="60" rx="5" stroke="#A78BFA" stroke-width="3"/>
+  <line x1="70" y1="110" x2="130" y2="110" stroke="#A78BFA" stroke-width="3"/>
+  <line x1="70" y1="130" x2="130" y2="130" stroke="#A78BFA" stroke-width="3"/>
+  <line x1="90" y1="90" x2="90" y2="150" stroke="#A78BFA" stroke-width="3"/>
+  <line x1="110" y1="90" x2="110" y2="150" stroke="#A78BFA" stroke-width="3"/>
+  
+  <!-- Circuit Lines -->
+  <path d="M40 100C40 67.9086 65.9086 42 98 42" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+  <path d="M160 100C160 132.091 134.091 158 102 158" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Nodes -->
+  <circle cx="50" cy="80" r="4" fill="#F472B6"/>
+  <circle cx="60" cy="120" r="4" fill="#F472B6"/>
+  <circle cx="140" cy="80" r="4" fill="#F472B6"/>
+  <circle cx="150" cy="120" r="4" fill="#F472B6"/>
+  <circle cx="100" cy="50" r="6" fill="#F472B6"/>
+  
+  <!-- Pulse Animation -->
+  <circle cx="100" cy="100" r="70" stroke="#60A5FA" stroke-width="2" stroke-dasharray="10 5">
+    <animate attributeName="r" values="65;75;65" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.8;0.2;0.8" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- Gradients -->
+  <defs>
+    <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) rotate(90) scale(100)">
+      <stop offset="0" stop-color="#1E293B"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </radialGradient>
+  </defs>
+</svg>
