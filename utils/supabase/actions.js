@@ -114,3 +114,52 @@ export async function signInWithGoogle() {
   revalidatePath('/', 'layout')
   return { status: "success" , user: data }
 }
+
+export async function forgotPassword(formData) {
+  const supabase = await createClient();
+  const origin = (await headers()).get('origin')
+
+  // Get email as a string
+  const email = formData.get("email");
+
+  try {
+    // Make sure email is passed as a string, not an object
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: `${origin}/auth/reset-password`,
+      }
+    );
+
+    if (error) {
+      console.error("Password reset error:", error.message);
+      return { status: error.message }
+    }
+
+    return { status: "success" }
+  } catch (err) {
+    console.error("Exception in password reset:", err);
+    return { status: err.message || "An unexpected error occurred" }
+  }
+}
+
+export async function resetPassword(formData , code) {
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    console.error("Error exchanging code for session:", error.message);
+    return { status: error.message }
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: formData.get("password"),
+  });
+
+  if (updateError) {
+    console.error("Error updating user:", updateError.message);
+    return { status: updateError.message }
+  }
+
+  return { status: "success" }
+}
