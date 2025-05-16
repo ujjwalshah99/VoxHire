@@ -45,8 +45,9 @@ export default function SignUp() {
     const result = await signUp(formData);
 
     setIsLoading(false);
+    console.log("result", result);
 
-    if(result.status === "sucess") {
+    if(result.status === "success") {
       router.push("/");
     }
     else if(result.status === "user already exists") {

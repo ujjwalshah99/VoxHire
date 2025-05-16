@@ -16,7 +16,7 @@ export default function SignIn() {
     const formData = new FormData(e.target);
     const result = await signIn(formData);
     
-    if(result.status == "sucess") {
+    if(result.status == "success") {
       router.push("/");
     }
     else {

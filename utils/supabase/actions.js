@@ -9,36 +9,36 @@ import {headers} from 'next/headers';
 export async function signIn(formData) {
   const supabase = await createClient()
 
-  const data = {
+  const credentials = {
     email: formData.get('email'),
     password: formData.get('password'),
   }
 
-  const { error , result } = await supabase.auth.signInWithPassword(data);
+  const { error , data } = await supabase.auth.signInWithPassword(credentials);
 
   if (error) {
     return { status: error.message, user: null }
   }
 
   revalidatePath('/', 'layout');
-  return { status: "sucess" , user: result }
+  return { status: "success" , user: data }
 }
 
 export async function signUp(formData) {
   const supabase = await createClient();
 
-  const data = {
+  const credentials = {
     name: formData.get('name'),
     email: formData.get('email'),
     password: formData.get('password'),
   }
 
-  const { error , result } = await supabase.auth.signUp({
-    email: data.email,
-    password: data.password,
+  const { error , data } = await supabase.auth.signUp({
+    email: credentials.email,
+    password: credentials.password,
     options: {
       data: {
-        name: data.name,
+        name: credentials.name,
       },
     },
   })
@@ -46,14 +46,24 @@ export async function signUp(formData) {
   if (error) {
     return { status: error.message, user: null }
   }
-  else if(result?.user?.identities?.length === 0) {
+  else if(data?.user?.identities?.length === 0) {
     return { status: "user already exists" , user: null }
   }
 
-  
+  const { error : insertError } = await supabase.from("Users").insert({
+    name: credentials.name,
+    email: credentials.email,
+    id : data.user.id,
+    created_at : data.user.created_at,
+    credits : 10
+  })
+
+  if(insertError) {
+    return { status: insertError.message, user: null }
+  }
 
   revalidatePath('/', 'layout')
-  return { status: "sucess" , user: result }
+  return { status: "success" , user: data }
 }
 
 export async function signOut() {
@@ -67,4 +77,17 @@ export async function signOut() {
 
   revalidatePath('/', 'layout')
   return { status: "success" }
+}
+
+export async function getUserSession() {
+  const supabase = await createClient()
+
+  const {data: { session } , error} = await supabase.auth.getSession()
+
+
+  if(error) {
+    return null
+  }
+
+  return {status : "success" , session : session }
 }
