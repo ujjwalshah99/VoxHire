@@ -101,11 +101,17 @@ next-env.d.ts
 # Configuration files
 tailwind.config.js
 postcss.config.js
+postcss.config.mjs
 jsconfig.json
 tsconfig.json
 .eslintrc.js
 .prettierrc
 next.config.js
+next.config.mjs
+
+# Scripts
+remove-from-git.ps1
+remove-additional-files.ps1
 
 # Serverless
 .serverless/
