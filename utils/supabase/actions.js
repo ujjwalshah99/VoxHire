@@ -79,15 +79,38 @@ export async function signOut() {
   return { status: "success" }
 }
 
-export async function getUserSession() {
+export async function getUser() {
   const supabase = await createClient()
 
-  const {data: { session } , error} = await supabase.auth.getSession()
+  const {data , error} = await supabase.auth.getUser()
 
 
   if(error) {
     return null
   }
 
-  return {status : "success" , session : session }
+  return {status : "success" , data : data }
+}
+
+export async function signInWithGoogle() {
+  const supabase = await createClient()
+  const origin = (await headers()).get('origin')
+
+  const { error , data } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${origin}/auth/callback`,
+    }
+  })
+
+  if (error) {
+    redirect("/error")
+  }
+
+  if(data?.url) {
+    redirect(data.url)
+  }
+
+  revalidatePath('/', 'layout')
+  return { status: "success" , user: data }
 }

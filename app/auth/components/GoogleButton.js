@@ -1,10 +1,20 @@
 'use client';
 
 import Button from './Button';
+import { redirect } from 'next/navigation';
+
+import { signInWithGoogle } from '@/utils/supabase/actions';
+
+const handleSignInWithGoogle = async () => {
+  const result = await signInWithGoogle();
+  if(result?.status === "success") {
+    redirect('/');
+  }
+}
 
 export default function GoogleButton({ text = 'Sign in with Google', disabled = false }) {
   return (
-    <Button variant="google" className="mt-2" disabled={disabled}>
+    <Button onClick={handleSignInWithGoogle} variant="google" className="mt-2" disabled={disabled}>
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
         <path
           fill="#4285F4"

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import AuthLayout from '../components/AuthLayout';
 import Input from '../components/Input';
 import Button from '../components/Button';
@@ -9,24 +10,63 @@ import GoogleButton from '../components/GoogleButton';
 import { useRouter } from 'next/navigation';
 import { signIn } from '@/utils/supabase/actions';
 
+// Error popup component
+const ErrorPopup = ({ message, onClose }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center"
+    >
+      <span className="mr-3">⚠️</span>
+      <span>{message}</span>
+      <button
+        onClick={onClose}
+        className="ml-4 bg-red-600 hover:bg-red-700 rounded-full w-6 h-6 flex items-center justify-center focus:outline-none"
+      >
+        ×
+      </button>
+    </motion.div>
+  );
+};
+
 export default function SignIn() {
   const router = useRouter();
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
     const formData = new FormData(e.target);
     const result = await signIn(formData);
-    
-    if(result.status == "success") {
+
+    setIsLoading(false);
+
+    if(result.status === "success") {
       router.push("/");
     }
-    else {
-      console.log("error", result.error);
+    else if(result.status === "Invalid login credentials") {
+      setError("This email doesn't exist. Please sign up first.");
     }
-    console.log('Sign in submitted');
+    else {
+      setError(result.status || "An error occurred during sign in.");
+      console.log("error", result.status);
+    }
   };
 
   return (
     <AuthLayout title="Sign In to Your Account">
+      {error && (
+        <ErrorPopup
+          message={error}
+          onClose={() => setError(null)}
+        />
+      )}
+
       <form onSubmit={handleSubmit}>
         <Input
           label="Email"
@@ -35,8 +75,9 @@ export default function SignIn() {
           placeholder="your.email@example.com"
           required
           name="email"
+          disabled={isLoading}
         />
-        
+
         <Input
           label="Password"
           type="password"
@@ -44,38 +85,39 @@ export default function SignIn() {
           placeholder="••••••••"
           required
           name="password"
+          disabled={isLoading}
         />
-        
+
         <div className="flex justify-end mb-4">
-          <Link 
-            href="/auth/forgot-password" 
+          <Link
+            href="/auth/forgot-password"
             className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
           >
             Forgot password?
           </Link>
         </div>
-        
-        <Button type="submit">
-          Sign In
+
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? 'Signing In...' : 'Sign In'}
         </Button>
-        
+
         <div className="my-4 flex items-center">
           <div className="flex-grow h-px bg-gray-700"></div>
           <span className="px-3 text-sm text-gray-500">or</span>
           <div className="flex-grow h-px bg-gray-700"></div>
         </div>
-        
-        <GoogleButton />
-        
-        <motion.div 
+
+        <GoogleButton disabled={isLoading} />
+
+        <motion.div
           className="mt-6 text-center text-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
           Don't have an account?{' '}
-          <Link 
-            href="/auth/signup" 
+          <Link
+            href="/auth/signup"
             className="text-blue-400 hover:text-blue-300 transition-colors"
           >
             Sign up
