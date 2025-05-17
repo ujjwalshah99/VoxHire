@@ -47,7 +47,7 @@ export default function SignIn() {
     setIsLoading(false);
 
     if(result.status === "success") {
-      router.push("/");
+      router.push("/dashboard");
     }
     else if(result.status === "Invalid login credentials") {
       setError("This email doesn't exist. Please sign up first.");

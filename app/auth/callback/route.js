@@ -6,7 +6,7 @@ export async function GET(request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get('next') ?? '/'
+  const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
     const supabase = await createClient()
@@ -24,7 +24,7 @@ export async function GET(request) {
         .select("*")
         .eq("eamil" , data.user.email)
         .single();
-        
+
 
         if(!existingUser) {
             const { error:insertError } = await supabase.from("Users").insert({
@@ -34,7 +34,7 @@ export async function GET(request) {
                 created_at : data.user.created_at,
                 credits : 10
             })
-    
+
             if(insertError) {
                 console.log("error in inserting user", insertError);
                 return NextResponse.redirect(`${origin}/error`)

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 export default async function AuthLayout({ children }) {
     const response = await getUser();
     if(response?.data) {
-        redirect('/');
+        redirect('/dashboard');
     }
   return (
     <>

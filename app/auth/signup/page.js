@@ -48,7 +48,7 @@ export default function SignUp() {
     console.log("result", result);
 
     if(result.status === "success") {
-      router.push("/");
+      router.push("/dashboard");
     }
     else if(result.status === "user already exists") {
       setError("This email is already registered. Please sign in instead.");
