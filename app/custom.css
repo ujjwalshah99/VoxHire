@@ -1,0 +1,4 @@
+/* Custom CSS for sidebar collapse */
+body.sidebar-collapsed .sidebar-collapsed\:ml-20 {
+  margin-left: 5rem;
+}
