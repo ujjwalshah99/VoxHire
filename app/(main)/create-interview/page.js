@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   DocumentTextIcon,
   ClockIcon,
@@ -17,12 +17,10 @@ import {
   UserIcon,
   PlusIcon,
   MinusCircleIcon,
-  BookmarkIcon
 } from '@heroicons/react/24/outline';
 
 export default function CreateInterview() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     jobPosition: '',
     jobDescription: '',
@@ -40,8 +38,7 @@ export default function CreateInterview() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
-
+  console.log(formData);
   // Common job roles for suggestions
   const jobRoleSuggestions = [
     'Frontend Developer',
@@ -59,23 +56,31 @@ export default function CreateInterview() {
     'Cloud Architect'
   ];
 
-  // Set the interview type based on URL parameter
-  useEffect(() => {
-    const type = searchParams.get('type');
-    if (type && ['video', 'phone', 'chat'].includes(type)) {
-      setFormData(prev => ({
-        ...prev,
-        interviewType: type
-      }));
-    }
-  }, [searchParams]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleJobPositionChange = (e) => {
+    const value = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      jobPosition: value
+    }));
+
+    // Show suggestions if there's text and matching suggestions
+    if (value.trim() !== '') {
+      const matchingSuggestions = jobRoleSuggestions.filter(
+        role => role.toLowerCase().includes(value.toLowerCase())
+      );
+      setShowSuggestions(matchingSuggestions.length > 0);
+    } else {
+      // If empty, show all suggestions
+      setShowSuggestions(true);
+    }
   };
 
   const toggleQuestionType = (type) => {
@@ -149,7 +154,6 @@ export default function CreateInterview() {
     const finalData = {
       ...formData,
       customQuestions: filteredCustomQuestions,
-      saveAsTemplate: saveAsTemplate
     };
 
     // Here you would typically send the data to your backend
@@ -199,7 +203,7 @@ export default function CreateInterview() {
               id="jobPosition"
               name="jobPosition"
               value={formData.jobPosition}
-              onChange={handleChange}
+              onChange={handleJobPositionChange}
               onFocus={handleJobPositionFocus}
               onBlur={handleJobPositionBlur}
               required
@@ -214,7 +218,7 @@ export default function CreateInterview() {
                     <div
                       key={index}
                       className="px-4 py-2 hover:bg-gray-700 cursor-pointer text-white"
-                      onClick={() => selectJobSuggestion(role)}
+                      onMouseDown={() => selectJobSuggestion(role)}
                     >
                       {role}
                     </div>
