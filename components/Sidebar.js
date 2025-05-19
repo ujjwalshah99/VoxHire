@@ -85,16 +85,18 @@ export default function Sidebar() {
 
       {/* Create New Interview Button */}
       <div className="p-4">
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          className={`w-full flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg transition-all duration-200 py-3 ${
-            isCollapsed ? 'px-2' : 'px-4'
-          }`}
-        >
-          <PlusIcon className="h-5 w-5" />
-          {!isCollapsed && <span className="ml-2">New Interview</span>}
-        </motion.button>
+        <Link href="/create-interview">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className={`w-full flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg transition-all duration-200 py-3 ${
+              isCollapsed ? 'px-2' : 'px-4'
+            }`}
+          >
+            <PlusIcon className="h-5 w-5" />
+            {!isCollapsed && <span className="ml-2">New Interview</span>}
+          </motion.button>
+        </Link>
       </div>
 
       {/* Navigation Links */}

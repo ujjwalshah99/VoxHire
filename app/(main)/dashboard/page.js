@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useUser } from "@/context/UserContext";
 import Image from "next/image";
+import Link from "next/link";
 import {
   VideoCameraIcon,
   PhoneIcon,
@@ -52,39 +53,43 @@ export default function Dashboard() {
         <div className="space-y-8">
           {/* Create New Interview Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="bg-gradient-to-br from-blue-600/20 to-indigo-600/20 backdrop-blur-lg rounded-xl p-6 border border-blue-500/30 shadow-lg hover:shadow-blue-500/10 hover:border-blue-500/50 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center">
-                <div className="p-3 bg-blue-600/20 rounded-lg mr-4">
-                  <VideoCameraIcon className="h-8 w-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
+            <Link href="/create-interview">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
+                className="bg-gradient-to-br from-blue-600/20 to-indigo-600/20 backdrop-blur-lg rounded-xl p-6 border border-blue-500/30 shadow-lg hover:shadow-blue-500/10 hover:border-blue-500/50 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center">
+                  <div className="p-3 bg-blue-600/20 rounded-lg mr-4">
+                    <VideoCameraIcon className="h-8 w-8 text-blue-400 group-hover:text-blue-300 transition-colors" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-white group-hover:text-blue-300 transition-colors">Create New Interview</h2>
+                    <p className="text-gray-400 mt-1">Set up a video interview with AI</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-white group-hover:text-blue-300 transition-colors">Create New Interview</h2>
-                  <p className="text-gray-400 mt-1">Set up a video interview with AI</p>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </Link>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-lg rounded-xl p-6 border border-purple-500/30 shadow-lg hover:shadow-purple-500/10 hover:border-purple-500/50 transition-all cursor-pointer group"
-            >
-              <div className="flex items-center">
-                <div className="p-3 bg-purple-600/20 rounded-lg mr-4">
-                  <PhoneIcon className="h-8 w-8 text-purple-400 group-hover:text-purple-300 transition-colors" />
+            <Link href="/create-interview?type=phone">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 backdrop-blur-lg rounded-xl p-6 border border-purple-500/30 shadow-lg hover:shadow-purple-500/10 hover:border-purple-500/50 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center">
+                  <div className="p-3 bg-purple-600/20 rounded-lg mr-4">
+                    <PhoneIcon className="h-8 w-8 text-purple-400 group-hover:text-purple-300 transition-colors" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-white group-hover:text-purple-300 transition-colors">Create Phone Screening Call</h2>
+                    <p className="text-gray-400 mt-1">Set up a phone screening with AI</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-white group-hover:text-purple-300 transition-colors">Create Phone Screening Call</h2>
-                  <p className="text-gray-400 mt-1">Set up a phone screening with AI</p>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </Link>
           </div>
 
           {/* Previously Created Interviews Section */}
@@ -140,10 +145,12 @@ export default function Dashboard() {
                 <CalendarDaysIcon className="h-12 w-12 text-gray-500 mx-auto mb-4" />
                 <h3 className="text-xl font-medium text-gray-300 mb-2">No interviews yet</h3>
                 <p className="text-gray-400 mb-6">Create your first interview to get started</p>
-                <button className="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors inline-flex items-center">
-                  <VideoCameraIcon className="h-5 w-5 mr-2" />
-                  Create New Interview
-                </button>
+                <Link href="/create-interview">
+                  <button className="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors inline-flex items-center">
+                    <VideoCameraIcon className="h-5 w-5 mr-2" />
+                    Create New Interview
+                  </button>
+                </Link>
               </div>
             )}
           </div>
