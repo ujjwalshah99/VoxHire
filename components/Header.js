@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useUser } from '@/context/UserContext';
+import Image from 'next/image';
 
 export default function Header() {
   const router = useRouter();
@@ -19,7 +20,20 @@ export default function Header() {
 
   return (
     <header className="bg-gray-800/30 backdrop-blur-sm border-b border-gray-700/50 py-2 px-4">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center">
+          <Image
+            src="/logo.svg"
+            alt="VoxHire Logo"
+            width={32}
+            height={32}
+            className="mr-2"
+          />
+          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+            VoxHire
+          </span>
+        </div>
+        <div>
         {isAuthenticated ? (
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-end mr-2">
@@ -49,6 +63,7 @@ export default function Header() {
             Sign In
           </motion.button>
         )}
+        </div>
       </div>
     </header>
   );
