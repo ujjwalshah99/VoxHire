@@ -17,6 +17,10 @@ import {
   UserIcon,
   PlusIcon,
   MinusCircleIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
 export default function CreateInterview() {
@@ -36,9 +40,10 @@ export default function CreateInterview() {
     },
     customQuestions: ['']
   });
+  const [currentStep, setCurrentStep] = useState(1); // Track the current step (1, 2, or 3)
+  const [generatedQuestions, setGeneratedQuestions] = useState([]); // Store generated questions
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  console.log(formData);
   // Common job roles for suggestions
   const jobRoleSuggestions = [
     'Frontend Developer',
@@ -135,7 +140,95 @@ export default function CreateInterview() {
     });
   };
 
-  const handleSubmit = async (e) => {
+  // Generate sample questions based on form data
+  const generateSampleQuestions = () => {
+    const questionTypes = [];
+    if (formData.questionTypes.technical) questionTypes.push('technical');
+    if (formData.questionTypes.behavioral) questionTypes.push('behavioral');
+    if (formData.questionTypes.experience) questionTypes.push('experience');
+    if (formData.questionTypes.problemSolving) questionTypes.push('problemSolving');
+    if (formData.questionTypes.leadership) questionTypes.push('leadership');
+
+    // Sample questions by type
+    const questionsByType = {
+      technical: [
+        `Explain how you would implement a ${formData.jobPosition} architecture from scratch.`,
+        `What are the key technologies you would use for ${formData.jobPosition} and why?`,
+        `Describe a challenging technical problem you've solved in a previous role.`,
+        `How do you stay updated with the latest trends in ${formData.jobPosition}?`,
+        `What testing methodologies do you prefer and why?`
+      ],
+      behavioral: [
+        `Tell me about a time when you had to work under pressure to meet a deadline.`,
+        `How do you handle conflicts within a team?`,
+        `Describe a situation where you had to adapt to a significant change at work.`,
+        `How do you prioritize tasks when you have multiple deadlines?`,
+        `Tell me about a time when you received constructive feedback and how you responded.`
+      ],
+      experience: [
+        `What experience do you have that makes you suitable for this ${formData.jobPosition} role?`,
+        `Describe your most successful project and your contribution to it.`,
+        `What tools and technologies have you used in your previous roles?`,
+        `How has your previous experience prepared you for this role?`,
+        `What challenges did you face in your previous role and how did you overcome them?`
+      ],
+      problemSolving: [
+        `How would you approach a situation where requirements are unclear?`,
+        `Describe a complex problem you solved and your approach to solving it.`,
+        `How do you debug a complex issue in a large codebase?`,
+        `What strategies do you use when you're stuck on a difficult problem?`,
+        `How do you balance quality and speed when solving problems?`
+      ],
+      leadership: [
+        `Describe a time when you had to lead a team through a difficult situation.`,
+        `How do you motivate team members who are struggling?`,
+        `Tell me about a time when you had to make an unpopular decision.`,
+        `How do you delegate tasks and responsibilities?`,
+        `Describe your leadership style and how it has evolved over time.`
+      ]
+    };
+
+    // Generate questions based on selected types and difficulty
+    const questions = [];
+
+    // Add 2-3 questions from each selected type
+    questionTypes.forEach(type => {
+      const typeQuestions = questionsByType[type];
+      const numQuestions = Math.min(formData.difficultyLevel === 'beginner' ? 2 : 3, typeQuestions.length);
+
+      // Randomly select questions
+      const selectedIndices = new Set();
+      while (selectedIndices.size < numQuestions) {
+        selectedIndices.add(Math.floor(Math.random() * typeQuestions.length));
+      }
+
+      // Add selected questions
+      [...selectedIndices].forEach(index => {
+        questions.push({
+          id: questions.length + 1,
+          type,
+          question: typeQuestions[index],
+          difficulty: formData.difficultyLevel
+        });
+      });
+    });
+
+    // Add custom questions if any
+    formData.customQuestions.forEach(question => {
+      if (question.trim()) {
+        questions.push({
+          id: questions.length + 1,
+          type: 'custom',
+          question,
+          difficulty: formData.difficultyLevel
+        });
+      }
+    });
+
+    return questions;
+  };
+
+  const handleGenerateQuestions = (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -149,22 +242,57 @@ export default function CreateInterview() {
 
     // Filter out empty custom questions
     const filteredCustomQuestions = formData.customQuestions.filter(q => q.trim() !== '');
+    setFormData(prev => ({
+      ...prev,
+      customQuestions: filteredCustomQuestions.length ? filteredCustomQuestions : ['']
+    }));
 
-    // Create the final data object
-    const finalData = {
+    // Simulate API call to generate questions
+    setTimeout(() => {
+      const questions = generateSampleQuestions();
+      setGeneratedQuestions(questions);
+      setIsSubmitting(false);
+      setCurrentStep(2); // Move to step 2
+    }, 1500);
+  };
+
+  const handleRegenerateQuestions = () => {
+    setIsSubmitting(true);
+
+    // Simulate API call to regenerate questions
+    setTimeout(() => {
+      const questions = generateSampleQuestions();
+      setGeneratedQuestions(questions);
+      setIsSubmitting(false);
+    }, 1000);
+  };
+
+  const handleCreateInterview = () => {
+    setIsSubmitting(true);
+
+    // Create the final interview object
+    const interview = {
       ...formData,
-      customQuestions: filteredCustomQuestions,
+      questions: generatedQuestions,
+      createdAt: new Date().toISOString()
     };
 
     // Here you would typically send the data to your backend
-    console.log('Form submitted:', finalData);
+    console.log('Interview created:', interview);
 
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
-      // Navigate to a success page or back to dashboard
-      router.push('/dashboard');
-    }, 2000);
+      setCurrentStep(3); // Move to step 3 (success)
+    }, 1500);
+  };
+
+  const handleFinish = () => {
+    router.push('/dashboard');
+  };
+
+  const handleBack = () => {
+    setCurrentStep(currentStep - 1);
   };
 
   const handleCancel = () => {
@@ -179,16 +307,31 @@ export default function CreateInterview() {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-3xl font-bold mb-2">Create New Interview</h1>
-        <p className="text-gray-400 mb-8">Fill in the details to generate interview questions</p>
+        <p className="text-gray-400 mb-4">
+          {currentStep === 1 && "Fill in the details to generate interview questions"}
+          {currentStep === 2 && "Review and customize the generated questions"}
+          {currentStep === 3 && "Your interview has been created successfully"}
+        </p>
+
+        {/* Step Indicator */}
+        <div className="flex items-center mb-8">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-blue-600' : 'bg-gray-700'} text-white font-medium`}>1</div>
+          <div className={`h-1 w-12 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-700'}`}></div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-700'} text-white font-medium`}>2</div>
+          <div className={`h-1 w-12 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-700'}`}></div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-700'} text-white font-medium`}>3</div>
+        </div>
       </motion.div>
 
-      <motion.form
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        onSubmit={handleSubmit}
-        className="space-y-6"
-      >
+      {/* Step 1: Interview Details Form */}
+      {currentStep === 1 && (
+        <motion.form
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          onSubmit={handleGenerateQuestions}
+          className="space-y-6"
+        >
         {/* Job Position */}
         <div className="space-y-2">
           <label htmlFor="jobPosition" className="block text-sm font-medium text-gray-300">
@@ -445,7 +588,124 @@ export default function CreateInterview() {
             )}
           </button>
         </div>
-      </motion.form>
+        </motion.form>
+      )}
+
+      {/* Step 2: Review Generated Questions */}
+      {currentStep === 2 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="space-y-6"
+        >
+          <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border border-gray-700/50 shadow-lg mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Generated Questions</h2>
+              <button
+                onClick={handleRegenerateQuestions}
+                disabled={isSubmitting}
+                className="flex items-center text-blue-400 hover:text-blue-300"
+              >
+                <ArrowPathIcon className="h-5 w-5 mr-1" />
+                Regenerate
+              </button>
+            </div>
+
+            {isSubmitting ? (
+              <div className="flex justify-center py-8">
+                <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {generatedQuestions.map((q) => (
+                  <div key={q.id} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/50">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="px-2 py-1 text-xs rounded-full capitalize"
+                        style={{
+                          backgroundColor:
+                            q.type === 'technical' ? 'rgba(59, 130, 246, 0.2)' :
+                            q.type === 'behavioral' ? 'rgba(139, 92, 246, 0.2)' :
+                            q.type === 'experience' ? 'rgba(16, 185, 129, 0.2)' :
+                            q.type === 'problemSolving' ? 'rgba(245, 158, 11, 0.2)' :
+                            q.type === 'leadership' ? 'rgba(239, 68, 68, 0.2)' :
+                            'rgba(75, 85, 99, 0.2)',
+                          color:
+                            q.type === 'technical' ? 'rgb(96, 165, 250)' :
+                            q.type === 'behavioral' ? 'rgb(167, 139, 250)' :
+                            q.type === 'experience' ? 'rgb(52, 211, 153)' :
+                            q.type === 'problemSolving' ? 'rgb(251, 191, 36)' :
+                            q.type === 'leadership' ? 'rgb(248, 113, 113)' :
+                            'rgb(156, 163, 175)'
+                        }}
+                      >
+                        {q.type === 'problemSolving' ? 'Problem Solving' : q.type}
+                      </span>
+                    </div>
+                    <p className="text-white">{q.question}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-between">
+            <button
+              onClick={handleBack}
+              className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white font-medium flex items-center"
+            >
+              <ArrowLeftIcon className="h-5 w-5 mr-2" />
+              Back
+            </button>
+            <button
+              onClick={handleCreateInterview}
+              disabled={isSubmitting}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white font-medium flex items-center"
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </>
+              ) : (
+                'Create Interview'
+              )}
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Step 3: Success */}
+      {currentStep === 3 && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center py-12"
+        >
+          <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircleIcon className="h-12 w-12 text-green-500" />
+          </div>
+          <h2 className="text-2xl font-bold mb-4">Interview Created Successfully!</h2>
+          <p className="text-gray-400 mb-8 max-w-md mx-auto">
+            Your interview has been created and is now ready to be shared with candidates.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={handleFinish}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white font-medium"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
