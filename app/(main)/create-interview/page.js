@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import axios from "axios";
 import { useRouter } from 'next/navigation';
+import { v4 as uuidv4 } from 'uuid';
+import { useUser } from '@/context/UserContext';
+import { createClient } from '@/utils/supabase/client';
 import {
   DocumentTextIcon,
   ClockIcon,
@@ -17,10 +21,8 @@ import {
   UserIcon,
   PlusIcon,
   MinusCircleIcon,
-  ArrowPathIcon,
   CheckCircleIcon,
-  ArrowLeftIcon,
-  ArrowRightIcon
+  ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 
 export default function CreateInterview() {
@@ -44,7 +46,8 @@ export default function CreateInterview() {
   const [generatedQuestions, setGeneratedQuestions] = useState([]); // Store generated questions
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  // Common job roles for suggestions
+  const { user } = useUser();
+
   const jobRoleSuggestions = [
     'Frontend Developer',
     'Backend Developer',
@@ -60,6 +63,7 @@ export default function CreateInterview() {
     'Data Analyst',
     'Cloud Architect'
   ];
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -140,95 +144,7 @@ export default function CreateInterview() {
     });
   };
 
-  // Generate sample questions based on form data
-  const generateSampleQuestions = () => {
-    const questionTypes = [];
-    if (formData.questionTypes.technical) questionTypes.push('technical');
-    if (formData.questionTypes.behavioral) questionTypes.push('behavioral');
-    if (formData.questionTypes.experience) questionTypes.push('experience');
-    if (formData.questionTypes.problemSolving) questionTypes.push('problemSolving');
-    if (formData.questionTypes.leadership) questionTypes.push('leadership');
-
-    // Sample questions by type
-    const questionsByType = {
-      technical: [
-        `Explain how you would implement a ${formData.jobPosition} architecture from scratch.`,
-        `What are the key technologies you would use for ${formData.jobPosition} and why?`,
-        `Describe a challenging technical problem you've solved in a previous role.`,
-        `How do you stay updated with the latest trends in ${formData.jobPosition}?`,
-        `What testing methodologies do you prefer and why?`
-      ],
-      behavioral: [
-        `Tell me about a time when you had to work under pressure to meet a deadline.`,
-        `How do you handle conflicts within a team?`,
-        `Describe a situation where you had to adapt to a significant change at work.`,
-        `How do you prioritize tasks when you have multiple deadlines?`,
-        `Tell me about a time when you received constructive feedback and how you responded.`
-      ],
-      experience: [
-        `What experience do you have that makes you suitable for this ${formData.jobPosition} role?`,
-        `Describe your most successful project and your contribution to it.`,
-        `What tools and technologies have you used in your previous roles?`,
-        `How has your previous experience prepared you for this role?`,
-        `What challenges did you face in your previous role and how did you overcome them?`
-      ],
-      problemSolving: [
-        `How would you approach a situation where requirements are unclear?`,
-        `Describe a complex problem you solved and your approach to solving it.`,
-        `How do you debug a complex issue in a large codebase?`,
-        `What strategies do you use when you're stuck on a difficult problem?`,
-        `How do you balance quality and speed when solving problems?`
-      ],
-      leadership: [
-        `Describe a time when you had to lead a team through a difficult situation.`,
-        `How do you motivate team members who are struggling?`,
-        `Tell me about a time when you had to make an unpopular decision.`,
-        `How do you delegate tasks and responsibilities?`,
-        `Describe your leadership style and how it has evolved over time.`
-      ]
-    };
-
-    // Generate questions based on selected types and difficulty
-    const questions = [];
-
-    // Add 2-3 questions from each selected type
-    questionTypes.forEach(type => {
-      const typeQuestions = questionsByType[type];
-      const numQuestions = Math.min(formData.difficultyLevel === 'beginner' ? 2 : 3, typeQuestions.length);
-
-      // Randomly select questions
-      const selectedIndices = new Set();
-      while (selectedIndices.size < numQuestions) {
-        selectedIndices.add(Math.floor(Math.random() * typeQuestions.length));
-      }
-
-      // Add selected questions
-      [...selectedIndices].forEach(index => {
-        questions.push({
-          id: questions.length + 1,
-          type,
-          question: typeQuestions[index],
-          difficulty: formData.difficultyLevel
-        });
-      });
-    });
-
-    // Add custom questions if any
-    formData.customQuestions.forEach(question => {
-      if (question.trim()) {
-        questions.push({
-          id: questions.length + 1,
-          type: 'custom',
-          question,
-          difficulty: formData.difficultyLevel
-        });
-      }
-    });
-
-    return questions;
-  };
-
-  const handleGenerateQuestions = (e) => {
+  const handleGenerateQuestions = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
@@ -247,44 +163,66 @@ export default function CreateInterview() {
       customQuestions: filteredCustomQuestions.length ? filteredCustomQuestions : ['']
     }));
 
-    // Simulate API call to generate questions
-    setTimeout(() => {
-      const questions = generateSampleQuestions();
-      setGeneratedQuestions(questions);
+    // Move to step 2 immediately
+    setCurrentStep(2);
+
+    try {
+      let questions = await axios.post("/api/ai-model", {
+        ...formData
+      });
+      const final_question = questions.data.replace('```json', '').replace('```', '');
+      const final = JSON.parse(final_question);
+      setGeneratedQuestions(final.interviewQuestions);
       setIsSubmitting(false);
-      setCurrentStep(2); // Move to step 2
-    }, 1500);
+    } catch(err) {
+      console.log(err);
+      setIsSubmitting(false);
+    }
   };
 
-  const handleRegenerateQuestions = () => {
+
+
+  const handleCreateInterview = async () => {
     setIsSubmitting(true);
 
-    // Simulate API call to regenerate questions
-    setTimeout(() => {
-      const questions = generateSampleQuestions();
-      setGeneratedQuestions(questions);
-      setIsSubmitting(false);
-    }, 1000);
-  };
+    const interview_id = uuidv4();
 
-  const handleCreateInterview = () => {
-    setIsSubmitting(true);
+    const typeof_questions = [];
+    for(const key in formData.questionTypes) {
+      if(formData.questionTypes[key] === true) {
+        typeof_questions.push(key);
+      }
+    }
 
-    // Create the final interview object
+
     const interview = {
-      ...formData,
-      questions: generatedQuestions,
-      createdAt: new Date().toISOString()
+      jobPosition : formData.jobPosition,
+      jobDescription: formData.jobDescription,
+      duration: formData.duration,
+      difficultyLevel: formData.difficultyLevel,
+      interview_id: interview_id,
+      questionList: generatedQuestions,
+      questionTypes : typeof_questions,
+      userEmail : user?.email
     };
 
     // Here you would typically send the data to your backend
     console.log('Interview created:', interview);
 
-    // Simulate API call
-    setTimeout(() => {
+    try{
+      const supabase = createClient();
+      const {data , error} = await supabase
+        .from("Interviews")
+        .insert(interview)
+        .select();
+
       setIsSubmitting(false);
-      setCurrentStep(3); // Move to step 3 (success)
-    }, 1500);
+      setCurrentStep(3); 
+    }
+    catch(err) {
+      console.log(err);
+      setIsSubmitting(false);
+    }  
   };
 
   const handleFinish = () => {
@@ -423,25 +361,14 @@ export default function CreateInterview() {
           <label className="block text-sm font-medium text-gray-300 mb-3">
             Interview Type
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div
-              className={`flex items-center p-4 border ${formData.interviewType === 'video' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 bg-gray-800/50'} rounded-lg cursor-pointer transition-colors`}
-              onClick={() => setFormData(prev => ({ ...prev, interviewType: 'video' }))}
+              className="flex items-center p-4 border border-blue-500 bg-blue-900/20 rounded-lg cursor-pointer transition-colors"
             >
-              <VideoCameraIcon className={`h-6 w-6 mr-3 ${formData.interviewType === 'video' ? 'text-blue-400' : 'text-gray-400'}`} />
+              <VideoCameraIcon className="h-6 w-6 mr-3 text-blue-400" />
               <div>
-                <p className={`font-medium ${formData.interviewType === 'video' ? 'text-blue-300' : 'text-white'}`}>Video Interview</p>
+                <p className="font-medium text-blue-300">Video Interview</p>
                 <p className="text-xs text-gray-400">Face-to-face with AI</p>
-              </div>
-            </div>
-            <div
-              className={`flex items-center p-4 border ${formData.interviewType === 'phone' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 bg-gray-800/50'} rounded-lg cursor-pointer transition-colors`}
-              onClick={() => setFormData(prev => ({ ...prev, interviewType: 'phone' }))}
-            >
-              <PhoneIcon className={`h-6 w-6 mr-3 ${formData.interviewType === 'phone' ? 'text-blue-400' : 'text-gray-400'}`} />
-              <div>
-                <p className={`font-medium ${formData.interviewType === 'phone' ? 'text-blue-300' : 'text-white'}`}>Phone Screening</p>
-                <p className="text-xs text-gray-400">Voice-only interview</p>
               </div>
             </div>
           </div>
@@ -600,52 +527,48 @@ export default function CreateInterview() {
           className="space-y-6"
         >
           <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border border-gray-700/50 shadow-lg mb-6">
-            <div className="flex justify-between items-center mb-4">
+            <div className="mb-4">
               <h2 className="text-xl font-semibold">Generated Questions</h2>
-              <button
-                onClick={handleRegenerateQuestions}
-                disabled={isSubmitting}
-                className="flex items-center text-blue-400 hover:text-blue-300"
-              >
-                <ArrowPathIcon className="h-5 w-5 mr-1" />
-                Regenerate
-              </button>
             </div>
 
             {isSubmitting ? (
-              <div className="flex justify-center py-8">
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
                 <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
+                <div className="text-center">
+                  <p className="text-lg font-medium text-blue-400">Generating Interview Questions</p>
+                  <p className="text-sm text-gray-400">Our AI is crafting personalized questions based on your job position</p>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
                 {generatedQuestions.map((q) => (
-                  <div key={q.id} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/50">
+                  <div key={q["id"]} className="bg-gray-700/50 rounded-lg p-4 border border-gray-600/50">
                     <div className="flex justify-between items-start mb-2">
                       <span className="px-2 py-1 text-xs rounded-full capitalize"
                         style={{
                           backgroundColor:
-                            q.type === 'technical' ? 'rgba(59, 130, 246, 0.2)' :
-                            q.type === 'behavioral' ? 'rgba(139, 92, 246, 0.2)' :
-                            q.type === 'experience' ? 'rgba(16, 185, 129, 0.2)' :
-                            q.type === 'problemSolving' ? 'rgba(245, 158, 11, 0.2)' :
-                            q.type === 'leadership' ? 'rgba(239, 68, 68, 0.2)' :
+                            q["type"] == 'technical' ? 'rgba(59, 130, 246, 0.2)' :
+                            q["type"] == 'behavioral' ? 'rgba(139, 92, 246, 0.2)' :
+                            q["type"] == 'experience' ? 'rgba(16, 185, 129, 0.2)' :
+                            q["type"] == 'problemSolving' ? 'rgba(245, 158, 11, 0.2)' :
+                            q["type"] == 'leadership' ? 'rgba(239, 68, 68, 0.2)' :
                             'rgba(75, 85, 99, 0.2)',
                           color:
-                            q.type === 'technical' ? 'rgb(96, 165, 250)' :
-                            q.type === 'behavioral' ? 'rgb(167, 139, 250)' :
-                            q.type === 'experience' ? 'rgb(52, 211, 153)' :
-                            q.type === 'problemSolving' ? 'rgb(251, 191, 36)' :
-                            q.type === 'leadership' ? 'rgb(248, 113, 113)' :
+                            q["type"] == 'technical' ? 'rgb(96, 165, 250)' :
+                            q["type"] == 'behavioral' ? 'rgb(167, 139, 250)' :
+                            q["type"] == 'experience' ? 'rgb(52, 211, 153)' :
+                            q["type"] == 'problemSolving' ? 'rgb(251, 191, 36)' :
+                            q["type"] == 'leadership' ? 'rgb(248, 113, 113)' :
                             'rgb(156, 163, 175)'
                         }}
                       >
-                        {q.type === 'problemSolving' ? 'Problem Solving' : q.type}
+                        {q["type"] == 'problemSolving' ? 'Problem Solving' : q["type"]}
                       </span>
                     </div>
-                    <p className="text-white">{q.question}</p>
+                    <p className="text-white">{q["question"]}</p>
                   </div>
                 ))}
               </div>
