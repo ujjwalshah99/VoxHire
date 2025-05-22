@@ -7,7 +7,11 @@ export async function middleware(request) {
   const response = await updateSession(request)
 
   // Get the pathname from the URL
-  const { pathname } = request.nextUrl
+  const { pathname } = request.nextUrl;
+
+  if (pathname == "/") {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
 
   // Public paths that are always accessible without authentication
   const publicPaths = [
@@ -19,6 +23,8 @@ export async function middleware(request) {
     '/auth/confirm',
     '/api', // Allow API routes
     '/_next', // Next.js system routes
+    '/dashboard',
+    '/settings',
   ]
 
   // Check if the current path is a public path or a static asset
