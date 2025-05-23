@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import {InterviewContext} from '@/context/InterviewContext';
+import { useContext } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function InterviewPage() {
   const params = useParams();
@@ -14,6 +17,8 @@ export default function InterviewPage() {
   const [error, setError] = useState(null);
   const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const {interviewInfo , setInterviewInfo} = useContext(InterviewContext);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchInterview() {
@@ -22,7 +27,7 @@ export default function InterviewPage() {
         const supabase = createClient();
         const { data, error } = await supabase
           .from('Interviews')
-          .select('*')
+          .select('jobPosition, duration, difficultyLevel')
           .eq('interview_id', interviewId)
           .single();
 
@@ -48,7 +53,7 @@ export default function InterviewPage() {
     }
   }, [interviewId]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!fullName.trim()) {
       alert('Please enter your full name');
@@ -57,11 +62,32 @@ export default function InterviewPage() {
     
     setIsSubmitting(true);
     
-    // Store the candidate name in localStorage for the actual interview
-    localStorage.setItem('candidateName', fullName);
-    
-    // Redirect to the actual interview experience
-    window.location.href = `/interview/${interviewId}/session`;
+    try {
+      const supabase = createClient();
+      let { data , error } = await supabase
+      .from("Interviews")
+      .select("*")
+      .eq("interview_id", interviewId)
+      .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setInterviewInfo({
+          ...data,
+          candidateName: fullName
+        });
+        router.push(`/interview/${interviewId}/start`);
+      } else {
+        setError('Interview not found');
+      } 
+    } catch (err) {
+      console.error('Error joining interview:', err);
+      setError('Failed to join interview');
+      setIsSubmitting(false);
+    } 
   };
 
   if (loading) {
