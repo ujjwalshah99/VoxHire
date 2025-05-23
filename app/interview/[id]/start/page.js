@@ -1,6 +1,8 @@
 'use client';
 
 import Vapi from "@vapi-ai/web";
+import {InterviewContext} from '@/context/InterviewContext';
+import { useContext } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useRouter } from 'next/navigation';
@@ -15,13 +17,18 @@ import {
   XCircleIcon
 } from '@heroicons/react/24/outline';
 
-export default function InterviewStartPage() {
+export default function interviewInfoStartPage() {
   const params = useParams();
   const router = useRouter();
   const interviewId = params.id;
 
+  // Initialize Vapi with your API key using useRef to prevent duplicate instances
+  // Replace this with your actual Vapi API key
+  const VAPI_API_KEY = "50109568-cedd-4bb8-8fbe-0b74a005b03d";
+  const vapiRef = useRef(null);
+
   // State variables
-  const [interview, setInterview] = useState(null);
+  const {interviewInfo, setInterviewInfo} = useContext(InterviewContext);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [candidateName, setCandidateName] = useState('');
@@ -29,21 +36,12 @@ export default function InterviewStartPage() {
   const [aiSpeaking, setAiSpeaking] = useState(false);
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [interviewStarted, setInterviewStarted] = useState(false);
-  const [interviewComplete, setInterviewComplete] = useState(false);
+  // No need for interviewInfoStarted state since we start automatically
+  const [interviewInfoComplete, setInterviewInfoComplete] = useState(false);
   const [currentMessage, setCurrentMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [timer, setTimer] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
-
-  // Mock questions for demonstration
-  const mockQuestions = [
-    "Tell me about yourself and your background in this field.",
-    "What are your greatest strengths and how do they help you in your work?",
-    "Describe a challenging project you worked on and how you overcame obstacles.",
-    "Where do you see yourself professionally in five years?",
-    "Do you have any questions for me about the position or company?"
-  ];
 
   // Animation variants
   const pulseVariants = {
@@ -85,63 +83,214 @@ export default function InterviewStartPage() {
   // Refs
   const messageEndRef = useRef(null);
 
-  // Fetch interview data
+  // Initialize Vapi instance only once
   useEffect(() => {
-    // Get candidate name from localStorage
-    const name = localStorage.getItem('candidateName');
-    if (!name) {
-      // Redirect back to the interview landing page if no name is found
-      router.push(`/interview/${interviewId}`);
-      return;
+    // Create Vapi instance only if it doesn't exist yet
+    if (!vapiRef.current) {
+      vapiRef.current = new Vapi(VAPI_API_KEY);
+      console.log("Vapi instance created");
     }
-    setCandidateName(name);
 
-    async function fetchInterview() {
+    // Cleanup function to handle component unmount
+    return () => {
+      // Stop the timer and any active Vapi call
+      setTimerActive(false);
       try {
-        setLoading(true);
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from('Interviews')
-          .select('*')
-          .eq('interview_id', interviewId)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          setInterview(data);
-          // Initialize with welcome message
-          setTimeout(() => {
-            addMessage('ai', `Hello ${name}, welcome to your interview for the ${data.jobPosition} position. I'll be asking you a series of questions. Please take your time to answer thoroughly.`);
-            setAiSpeaking(true);
-            setTimeout(() => {
-              setAiSpeaking(false);
-              setTimeout(() => {
-                addMessage('ai', 'Are you ready to begin the interview?');
-                setAiSpeaking(true);
-                setTimeout(() => {
-                  setAiSpeaking(false);
-                }, 2000);
-              }, 1000);
-            }, 5000);
-          }, 1500);
-        } else {
-          setError('Interview not found');
+        if (vapiRef.current) {
+          vapiRef.current.stop();
         }
       } catch (err) {
-        console.error('Error fetching interview:', err);
-        setError('Failed to load interview details');
-      } finally {
-        setLoading(false);
+        console.error('Error stopping Vapi:', err);
       }
+    };
+  }, []); // Empty dependency array ensures this runs only once
+
+  // Handle interview data and start call
+  useEffect(() => {
+    console.log(interviewInfo);
+
+    // Set candidate name and start timer
+    setCandidateName(interviewInfo?.candidateName);
+    setTimerActive(true);
+
+    // Fetch interview data if not already available
+    if (!interviewInfo || !interviewInfo.jobPosition) {
+      const fetchInterviewData = async () => {
+        try {
+          const supabase = createClient();
+          const { data, error } = await supabase
+            .from('Interviews')
+            .select('*')
+            .eq('interview_id', interviewId)
+            .single();
+
+          if (error) {
+            throw error;
+          }
+
+          if (data) {
+            // Store interview data in context
+            setInterviewInfo(data);
+            // Start the interview call with Vapi
+            setTimeout(() => {
+              startCall();
+              setLoading(false);
+            }, 1000); // Short delay to ensure UI is ready
+          } else {
+            setError('Interview not found');
+            setLoading(false);
+          }
+        } catch (err) {
+          console.error('Error fetching interview:', err);
+          setError('Failed to load interview details');
+          setLoading(false);
+        }
+      };
+
+      fetchInterviewData();
+    } else {
+      // If interview data is already available, start the call
+      startCall();
+      setLoading(false);
+    }
+  }, [interviewInfo, interviewId]);
+
+  const startCall = () => {
+    // Format questions into a string
+    let questionList = '';
+    if (interviewInfo?.questionList && interviewInfo.questionList.length > 0) {
+      interviewInfo.questionList.forEach((item, index) => {
+        questionList += `${index + 1}. ${item.question}\n`;
+      });
+    } else {
+      questionList = "No questions available. Please improvise appropriate questions for this position.";
     }
 
-    if (interviewId) {
-      fetchInterview();
+    // Set up Vapi assistant options
+    const assistantOptions = {
+      name: "AI Recruiter",
+      firstMessage: `Hello ${candidateName || 'there'}, I'm your AI interviewer for the ${interviewInfo?.jobPosition || 'position'} role. How are you today?`,
+      transcriber: {
+        provider: "deepgram",
+        model: "nova-2",
+        language: "en-US",
+      },
+      voice: {
+        provider: "playht",
+        voiceId: "jennifer", // Female voice
+      },
+      model: {
+        provider: "openai",
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `
+              You are an AI interviewer conducting a professional job interview for the ${interviewInfo?.jobPosition || 'position'} role.
+
+              Begin the conversation with a friendly introduction, setting a relaxed yet professional tone:
+              "Hello! I'm your AI interviewer for the ${interviewInfo?.jobPosition || 'position'} role. I'll be asking you several questions to assess your qualifications."
+
+              Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise.
+
+              Here are the questions to ask one by one:
+              ${questionList}
+
+              Guidelines for the interview:
+              1. If the candidate struggles, offer hints or rephrase the question without giving away the answer.
+              2. Provide brief, encouraging feedback after each answer.
+              3. Keep the conversation natural and engaging - use transitional phrases between questions.
+              4. After all questions, wrap up the interview by thanking the candidate for their time.
+              5. Be professional but friendly throughout the interview.
+              6. Keep your responses concise and conversational.
+              7. Adapt based on the candidate's responses.
+              8. Focus the interview on the specific job role mentioned.
+
+              The difficulty level for this interview is: ${interviewInfo?.difficultyLevel || 'intermediate'}.
+
+              When the interview is complete, clearly indicate that all questions have been asked and the interview is finished.
+            `.trim(),
+          },
+        ],
+      },
+      // Add event handlers to sync with UI
+      onStart: () => {
+        console.log("Vapi call started");
+        setAiSpeaking(true);
+      },
+      onEnd: () => {
+        console.log("Vapi call ended");
+        setInterviewInfoComplete(true);
+        setTimerActive(false);
+      },
+      onError: (error) => {
+        console.error("Vapi error:", error);
+        setError("There was an error with the interview. Please try again.");
+        // Start simulated interview as fallback
+        simulateInterview();
+      },
+      // Track speaking states
+      onAssistantStart: () => setAiSpeaking(true),
+      onAssistantEnd: () => setAiSpeaking(false),
+      onUserStart: () => setUserSpeaking(true),
+      onUserEnd: () => setUserSpeaking(false),
+      // Track messages for display
+      onMessage: (message) => {
+        if (message.role === "assistant") {
+          addMessage('ai', message.content);
+        } else if (message.role === "user") {
+          addMessage('user', message.content);
+          // Increment question counter when user responds
+          if (currentQuestion < (interviewInfo?.questionList?.length || 5) - 1) {
+            setCurrentQuestion(prev => prev + 1);
+          }
+        }
+      }
+    };
+
+    try {
+      // Make sure Vapi instance exists
+      if (!vapiRef.current) {
+        throw new Error("Vapi instance not initialized");
+      }
+
+      // Start the Vapi call with the comprehensive configuration
+      vapiRef.current.start(assistantOptions);
+      console.log("Vapi interview started successfully");
+    } catch (err) {
+      console.error('Error starting Vapi:', err);
+      setError('Using simulated interview mode due to API connection issues.');
+      // Start simulated interview as fallback
+      simulateInterview();
     }
-  }, [interviewId, router]);
+  }
+
+  // Fallback function to simulate an interview if Vapi fails
+  const simulateInterview = () => {
+    // Start the timer
+    setTimerActive(true);
+
+    // Welcome message
+    addMessage('ai', `Hello ${candidateName}, welcome to your interview for the ${interviewInfo?.jobPosition || 'position'} role. I'll be asking you a series of questions.`);
+    setAiSpeaking(true);
+
+    // Simulate the AI speaking
+    setTimeout(() => {
+      setAiSpeaking(false);
+
+      // First question after a delay
+      setTimeout(() => {
+        const question = interviewInfo?.questionList?.[0]?.question ||
+                        "Tell me about yourself and your background in this field.";
+        addMessage('ai', question);
+        setAiSpeaking(true);
+
+        setTimeout(() => {
+          setAiSpeaking(false);
+        }, 3000);
+      }, 2000);
+    }, 4000);
+  }
 
   // Auto-scroll to the bottom of messages
   useEffect(() => {
@@ -174,34 +323,66 @@ export default function InterviewStartPage() {
     setMessages(prev => [...prev, newMessage]);
   };
 
-  // Simulate starting the interview
-  const startInterview = () => {
-    setInterviewStarted(true);
-    setTimerActive(true); // Start the timer
-    addMessage('ai', mockQuestions[currentQuestion]);
-    setAiSpeaking(true);
-    setTimeout(() => {
-      setAiSpeaking(false);
-    }, 3000);
+  // No need for startinterviewInfo function since we start automatically
+
+  // Handle user speaking with Vapi
+  const handleUserSpeak = () => {
+    try {
+      // If Vapi is already listening or AI is speaking, do nothing
+      if (userSpeaking || aiSpeaking) return;
+
+      // For the simulated interview mode
+      if (error && error.includes('simulated')) {
+        simulateUserSpeaking();
+        return;
+      }
+
+      // Manually trigger Vapi to listen
+      if (vapiRef.current) {
+        vapiRef.current.userStart();
+      } else {
+        throw new Error("Vapi instance not initialized");
+      }
+
+      // The rest is handled by Vapi event handlers
+    } catch (err) {
+      console.error('Error starting user speech:', err);
+      // Fallback in case Vapi fails
+      simulateUserSpeaking();
+    }
   };
 
-  // Simulate user speaking
-  const handleUserSpeak = () => {
-    if (userSpeaking) return;
-
+  // Simulate user speaking for fallback mode
+  const simulateUserSpeaking = () => {
     setUserSpeaking(true);
-    // Simulate recording for 5 seconds
+
+    // Simulate recording for 3 seconds
     setTimeout(() => {
       setUserSpeaking(false);
-      // Add user's "response" to the conversation
-      addMessage('user', "This is a simulated response from the user. In a real implementation, this would be the transcribed speech from the user's microphone.");
 
-      // Move to next question or end interview
+      // Add simulated user response
+      const responses = [
+        "I have five years of experience in this field, working primarily with enterprise clients.",
+        "My greatest strength is my ability to solve complex problems efficiently.",
+        "In my previous role, I led a team that delivered a major project ahead of schedule.",
+        "I'm passionate about continuous learning and staying updated with industry trends.",
+        "I believe my skills align well with what you're looking for in this position."
+      ];
+
+      // Use the current question index to get a relevant response
+      const response = responses[currentQuestion % responses.length];
+      addMessage('user', response);
+
+      // Move to next question
       setTimeout(() => {
-        if (currentQuestion < mockQuestions.length - 1) {
+        if (currentQuestion < (interviewInfo?.questionList?.length || 5) - 1) {
+          const nextQuestion = interviewInfo?.questionList?.[currentQuestion + 1]?.question ||
+                              "Tell me about a challenging project you worked on.";
+
           setCurrentQuestion(prev => prev + 1);
           setAiSpeaking(true);
-          addMessage('ai', mockQuestions[currentQuestion + 1]);
+          addMessage('ai', nextQuestion);
+
           setTimeout(() => {
             setAiSpeaking(false);
           }, 3000);
@@ -209,14 +390,15 @@ export default function InterviewStartPage() {
           // End of interview
           setAiSpeaking(true);
           addMessage('ai', "Thank you for completing this interview. Your responses have been recorded. We'll be in touch with next steps soon.");
+
           setTimeout(() => {
             setAiSpeaking(false);
-            setInterviewComplete(true);
-            setTimerActive(false); // Stop the timer
+            setInterviewInfoComplete(true);
+            setTimerActive(false);
           }, 4000);
         }
       }, 1000);
-    }, 5000);
+    }, 3000);
   };
 
   // Loading state
@@ -250,12 +432,14 @@ export default function InterviewStartPage() {
               VoxHire
             </h1>
             <span className="ml-4 px-3 py-1 bg-blue-900/30 rounded-full text-xs font-medium text-blue-300 border border-blue-800/50">
-              {interview?.jobPosition || 'Interview'} • {interview?.difficultyLevel || 'Standard'} Level
+              {interviewInfo?.jobPosition || 'interviewInfo'} • {interviewInfo?.difficultyLevel || 'Standard'} Level
             </span>
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-400">
-              Question {currentQuestion + 1} of {mockQuestions.length}
+              {interviewInfo?.questionList ?
+                `Question ${currentQuestion + 1} of ${interviewInfo.questionList.length}` :
+                'Interview in progress'}
             </div>
             <div className="px-3 py-1 bg-gray-800/70 rounded-lg text-sm font-mono text-blue-300 border border-gray-700/50 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -282,7 +466,7 @@ export default function InterviewStartPage() {
                     animate={aiSpeaking ? 'speaking' : 'idle'}
                   >
                     <Image
-                      src={"/AI-Interviewer-Avatar.png"}
+                      src={"/AI-interviewer-Avatar.png"}
                       alt="AI Assistant"
                       fill
                       style={{ objectFit: 'contain' }}
@@ -302,7 +486,7 @@ export default function InterviewStartPage() {
                     <SpeakerWaveIcon className={`h-5 w-5 ${aiSpeaking ? 'text-white' : 'text-blue-200'}`} />
                   </div>
                 </div>
-                <h3 className="mt-3 font-medium">AI Interviewer</h3>
+                <h3 className="mt-3 font-medium">AI interviewInfoer</h3>
                 <span className="text-xs text-blue-400">
                   {aiSpeaking ? 'Speaking...' : 'Listening...'}
                 </span>
@@ -317,7 +501,7 @@ export default function InterviewStartPage() {
                     animate={userSpeaking ? 'speaking' : 'idle'}
                   >
                     <Image
-                      src={"/AI-Interviewer-Avatar.png"}
+                      src={"/inter-taker.jpg"}
                       alt="AI Assistant"
                       fill
                       style={{ objectFit: 'contain' }}
@@ -373,16 +557,21 @@ export default function InterviewStartPage() {
       {/* Controls */}
       <footer className="bg-gray-900/70 backdrop-blur-sm border-t border-gray-800 py-4 px-6">
         <div className="max-w-4xl mx-auto flex justify-center">
-          {!interviewStarted ? (
+          {interviewInfoComplete ? (
             <button
-              onClick={startInterview}
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center"
-            >
-              Start Interview
-            </button>
-          ) : interviewComplete ? (
-            <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => {
+                // Ensure Vapi is stopped
+                try {
+                  if (vapiRef.current) {
+                    vapiRef.current.stop();
+                  }
+                } catch (err) {
+                  console.error('Error stopping Vapi:', err);
+                }
+
+                // Navigate to dashboard
+                router.push('/dashboard');
+              }}
               className="px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center"
             >
               <CheckCircleIcon className="h-5 w-5 mr-2" />
@@ -417,7 +606,19 @@ export default function InterviewStartPage() {
 
               <button
                 onClick={() => {
-                  setTimerActive(false); // Stop the timer
+                  // Stop the timer
+                  setTimerActive(false);
+
+                  // Stop the Vapi call
+                  try {
+                    if (vapiRef.current) {
+                      vapiRef.current.stop();
+                    }
+                  } catch (err) {
+                    console.error('Error stopping Vapi:', err);
+                  }
+
+                  // Navigate back to the interview landing page
                   router.push(`/interview/${interviewId}`);
                 }}
                 className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center"

@@ -25,6 +25,7 @@ export async function middleware(request) {
     '/_next', // Next.js system routes
     '/dashboard',
     '/settings',
+    '/interview'
   ]
 
   // Check if the current path is a public path or a static asset

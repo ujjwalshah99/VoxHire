@@ -8,7 +8,7 @@ import { useState } from 'react';
 const inter = Inter({ subsets: ['latin'] });
 
 export default function InterviewLayout({ children }) {
-  const [interviewInfo , setInterviewInfo] = useState(null);
+  const [interviewInfo , setInterviewInfo] = useState();
   return (
     <InterviewContext.Provider value={{interviewInfo , setInterviewInfo}}>
       <html lang="en">
