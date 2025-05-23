@@ -1,5 +1,6 @@
 'use client';
 
+import Vapi from "@vapi-ai/web";
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useRouter } from 'next/navigation';
@@ -281,7 +282,7 @@ export default function InterviewStartPage() {
                     animate={aiSpeaking ? 'speaking' : 'idle'}
                   >
                     <Image
-                      src="/ai-assistant.svg"
+                      src={"/AI-Interviewer-Avatar.png"}
                       alt="AI Assistant"
                       fill
                       style={{ objectFit: 'contain' }}
@@ -315,9 +316,12 @@ export default function InterviewStartPage() {
                     variants={pulseVariants}
                     animate={userSpeaking ? 'speaking' : 'idle'}
                   >
-                    <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white">
-                      {candidateName ? candidateName.charAt(0).toUpperCase() : 'U'}
-                    </div>
+                    <Image
+                      src={"/AI-Interviewer-Avatar.png"}
+                      alt="AI Assistant"
+                      fill
+                      style={{ objectFit: 'contain' }}
+                    />
                     {[1, 2, 3].map(i => (
                       <motion.div
                         key={i}
