@@ -28,85 +28,27 @@ export default function InterviewDetails() {
   
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [mockResults, setMockResults] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
-    const loadHardcodedData = () => {
+    async function fetchData() {
       setLoading(true);
-
-      // Hardcoded interview data
-      const hardcodedInterview = {
-        interview_id: interviewId,
-        jobPosition: "Senior Frontend Developer",
-        duration: "45",
-        difficultyLevel: "intermediate",
-        created_at: "2024-06-15T10:30:00Z",
-        questionTypes: ["technical", "behavioral", "problem-solving"],
-        questionList: [
-          "Explain the difference between React hooks and class components",
-          "How would you optimize a React application for performance?",
-          "Describe a challenging project you worked on and how you overcame obstacles",
-          "How do you handle state management in large React applications?",
-          "What's your approach to debugging complex frontend issues?"
-        ],
-        status: "completed"
-      };
-
-      // Hardcoded performance results
-      const hardcodedResults = {
-        overallScore: 87,
-        technicalScore: 92,
-        communicationScore: 85,
-        problemSolvingScore: 88,
-        confidenceLevel: 82,
-        completionTime: 42,
-        questionsAnswered: 5,
-        strengths: [
-          "Excellent technical knowledge of React ecosystem",
-          "Clear and articulate communication style",
-          "Strong problem-solving methodology",
-          "Good understanding of performance optimization"
-        ],
-        improvements: [
-          "Could provide more specific examples from past projects",
-          "Practice explaining complex concepts with simpler analogies",
-          "Work on confidence when discussing unfamiliar topics",
-          "Consider asking clarifying questions before diving into answers"
-        ],
-        feedback: "Outstanding performance! You demonstrated deep technical expertise and communicated your ideas clearly. Your approach to problem-solving is methodical and well-structured. Focus on building confidence in areas outside your core expertise and you'll be ready for senior-level positions.",
-        transcript: [
-          {
-            speaker: "AI Interviewer",
-            message: "Hello! Let's start with a technical question. Can you explain the difference between React hooks and class components?",
-            timestamp: "00:01"
-          },
-          {
-            speaker: "Candidate",
-            message: "Sure! React hooks were introduced in React 16.8 as a way to use state and lifecycle methods in functional components. Unlike class components, hooks allow you to reuse stateful logic between components without changing your component hierarchy...",
-            timestamp: "00:02"
-          },
-          {
-            speaker: "AI Interviewer",
-            message: "That's a great explanation! Now, how would you optimize a React application for performance?",
-            timestamp: "00:05"
-          },
-          {
-            speaker: "Candidate",
-            message: "There are several strategies I'd use. First, I'd implement React.memo for functional components to prevent unnecessary re-renders. I'd also use useMemo and useCallback hooks to memoize expensive calculations and functions...",
-            timestamp: "00:06"
-          }
-        ]
-      };
-
-      setInterview(hardcodedInterview);
-      setMockResults(hardcodedResults);
+      try {
+        // Fetch interview details
+        const interviewRes = await fetch(`/api/interview?id=${interviewId}`);
+        const interviewData = await interviewRes.json();
+        setInterview(interviewData);
+        // Fetch analytics for this interview
+        const analyticsRes = await fetch(`/api/analytics?interview_id=${interviewId}`);
+        const analyticsData = await analyticsRes.json();
+        setAnalytics(analyticsData);
+      } catch (err) {
+        setInterview(null);
+        setAnalytics(null);
+      }
       setLoading(false);
-    };
-
-    if (interviewId) {
-      // Simulate loading delay
-      setTimeout(loadHardcodedData, 500);
     }
+    if (interviewId) fetchData();
   }, [interviewId]);
 
   const copyToClipboard = (text) => {
@@ -126,6 +68,22 @@ export default function InterviewDetails() {
     return 'bg-red-600/20 border-red-500/30';
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this interview? This action cannot be undone.')) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/interview?interview_id=${interviewId}`, { method: 'DELETE' });
+      if (res.ok) {
+        router.push('/dashboard');
+      } else {
+        alert('Failed to delete interview.');
+      }
+    } catch (err) {
+      alert('Error deleting interview.');
+    }
+    setLoading(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -133,8 +91,6 @@ export default function InterviewDetails() {
       </div>
     );
   }
-
-
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -232,7 +188,7 @@ export default function InterviewDetails() {
         </motion.div>
 
         {/* Performance Results */}
-        {mockResults && (
+        {analytics && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -246,44 +202,13 @@ export default function InterviewDetails() {
 
             {/* Overall Score */}
             <div className="text-center mb-8">
-              <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full border-4 ${getScoreBg(mockResults.overallScore)}`}>
+              <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full border-4 ${getScoreBg(analytics.total_score)}`}>
                 <div className="text-center">
-                  <p className={`text-3xl font-bold ${getScoreColor(mockResults.overallScore)}`}>
-                    {mockResults.overallScore}%
+                  <p className={`text-3xl font-bold ${getScoreColor(analytics.total_score)}`}>
+                    {analytics.total_score}%
                   </p>
                   <p className="text-gray-400 text-sm">Overall Score</p>
                 </div>
-              </div>
-            </div>
-
-            {/* Detailed Scores */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <div className="text-center p-4 bg-gray-700/30 rounded-lg">
-                <p className={`text-2xl font-bold ${getScoreColor(mockResults.technicalScore)}`}>
-                  {mockResults.technicalScore}%
-                </p>
-                <p className="text-gray-400 text-sm">Technical Skills</p>
-              </div>
-
-              <div className="text-center p-4 bg-gray-700/30 rounded-lg">
-                <p className={`text-2xl font-bold ${getScoreColor(mockResults.communicationScore)}`}>
-                  {mockResults.communicationScore}%
-                </p>
-                <p className="text-gray-400 text-sm">Communication</p>
-              </div>
-
-              <div className="text-center p-4 bg-gray-700/30 rounded-lg">
-                <p className={`text-2xl font-bold ${getScoreColor(mockResults.problemSolvingScore)}`}>
-                  {mockResults.problemSolvingScore}%
-                </p>
-                <p className="text-gray-400 text-sm">Problem Solving</p>
-              </div>
-
-              <div className="text-center p-4 bg-gray-700/30 rounded-lg">
-                <p className={`text-2xl font-bold ${getScoreColor(mockResults.confidenceLevel)}`}>
-                  {mockResults.confidenceLevel}%
-                </p>
-                <p className="text-gray-400 text-sm">Confidence</p>
               </div>
             </div>
 
@@ -293,7 +218,7 @@ export default function InterviewDetails() {
                 <LightBulbIcon className="h-5 w-5 mr-2" />
                 AI Feedback
               </h3>
-              <p className="text-gray-300">{mockResults.feedback}</p>
+              <p className="text-gray-300">{analytics.feedback_summary}</p>
             </div>
 
             {/* Strengths and Improvements */}
@@ -304,7 +229,7 @@ export default function InterviewDetails() {
                   Strengths
                 </h3>
                 <ul className="space-y-2">
-                  {mockResults.strengths.map((strength, index) => (
+                  {Array.isArray(analytics.strengths) && analytics.strengths.map((strength, index) => (
                     <li key={index} className="flex items-center text-gray-300">
                       <CheckCircleIcon className="h-4 w-4 text-green-400 mr-2 flex-shrink-0" />
                       {strength}
@@ -319,7 +244,7 @@ export default function InterviewDetails() {
                   Areas for Improvement
                 </h3>
                 <ul className="space-y-2">
-                  {mockResults.improvements.map((improvement, index) => (
+                  {Array.isArray(analytics.improvements) && analytics.improvements.map((improvement, index) => (
                     <li key={index} className="flex items-center text-gray-300">
                       <XCircleIcon className="h-4 w-4 text-yellow-400 mr-2 flex-shrink-0" />
                       {improvement}
@@ -348,7 +273,7 @@ export default function InterviewDetails() {
                     <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
                       {index + 1}
                     </span>
-                    <p className="text-gray-300">{question}</p>
+                    <p className="text-gray-300">{typeof question === 'string' ? question : question.question}</p>
                   </div>
                 </div>
               ))}
@@ -375,6 +300,13 @@ export default function InterviewDetails() {
               Back to Dashboard
             </button>
           </Link>
+
+          <button
+            onClick={handleDelete}
+            className="px-6 py-3 bg-red-700 border border-red-800 rounded-lg text-white font-medium hover:bg-red-800 transition-all"
+          >
+            Delete Interview
+          </button>
         </motion.div>
       </div>
     </div>
