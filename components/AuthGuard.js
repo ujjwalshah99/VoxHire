@@ -1,24 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
-import UnauthenticatedLanding from '@/components/UnauthenticatedLanding';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-// Smart redirect based on authentication status
-export default function Home() {
+export default function AuthGuard({ children, redirectTo = '/auth/signin', showLoadingSpinner = true }) {
   const { user, isLoading, isAuthenticated } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
+    if (!isLoading && !isAuthenticated) {
+      router.push(redirectTo);
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router, redirectTo]);
 
-  // Show loading while checking authentication
+  // Show loading spinner while checking authentication
   if (isLoading) {
+    if (!showLoadingSpinner) return null;
+    
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <motion.div
@@ -33,11 +33,11 @@ export default function Home() {
     );
   }
 
-  // Show landing page for unauthenticated users
+  // If not authenticated, don't render children (redirect will happen)
   if (!isAuthenticated) {
-    return <UnauthenticatedLanding />;
+    return null;
   }
 
-  // This will not render as the useEffect will redirect authenticated users
-  return null;
+  // If authenticated, render children
+  return children;
 }

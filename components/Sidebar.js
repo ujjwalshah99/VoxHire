@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useUser } from '@/context/UserContext';
+import { getUserDisplayName, getUserAvatar } from '@/utils/auth';
 import {
   HomeIcon,
   CogIcon,
@@ -35,8 +36,13 @@ export default function Sidebar() {
   }, [isCollapsed]);
 
   const handleSignOut = async () => {
-    await signOut();
-    router.refresh();
+    try {
+      await signOut();
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
   };
 
   const handleSignIn = () => {
@@ -133,11 +139,11 @@ export default function Sidebar() {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center text-sm font-medium">
-                {user?.email?.charAt(0).toUpperCase() || 'U'}
+                {getUserAvatar(user)}
               </div>
               {!isCollapsed && (
                 <div className="ml-3">
-                  <p className="text-sm font-medium">{user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}</p>
+                  <p className="text-sm font-medium">{getUserDisplayName(user)}</p>
                   <p className="text-xs text-gray-400">{user?.email || 'user@example.com'}</p>
                 </div>
               )}

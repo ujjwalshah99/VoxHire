@@ -35,65 +35,28 @@ export default function Analytics() {
 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
-      if (!user?.id) return;
+      if (!user?.email) {
+        setLoadingData(false);
+        return;
+      }
       
       try {
-        const supabase = createClient();
+        setLoadingData(true);
         
-        // Fetch user's interviews
-        const { data: interviews, error } = await supabase
-          .from('Interviews')
-          .select('*')
-          .eq('userEmail', user.email)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        setUserInterviews(interviews || []);
+        // Fetch analytics data from API
+        const response = await fetch(`/api/analytics?userEmail=${encodeURIComponent(user.email)}`);
+        const analyticsData = await response.json();
         
-        // Calculate analytics
-        const totalInterviews = interviews?.length || 0;
-        const completedInterviews = interviews?.filter(interview => interview.status === 'completed').length || 0;
-        const totalPracticeTime = interviews?.reduce((total, interview) => {
-          return total + (parseInt(interview.duration) || 0);
-        }, 0) || 0;
-
-        // Mock skill breakdown
-        const skillBreakdown = {
-          technical: Math.floor(Math.random() * 40) + 60,
-          behavioral: Math.floor(Math.random() * 40) + 60,
-          communication: Math.floor(Math.random() * 40) + 60,
-          problemSolving: Math.floor(Math.random() * 40) + 60,
-          leadership: Math.floor(Math.random() * 40) + 60
-        };
-
-        // Mock monthly progress
-        const monthlyProgress = [
-          { month: 'Jan', interviews: 2, avgScore: 75 },
-          { month: 'Feb', interviews: 3, avgScore: 78 },
-          { month: 'Mar', interviews: 4, avgScore: 82 },
-          { month: 'Apr', interviews: 5, avgScore: 85 },
-          { month: 'May', interviews: 3, avgScore: 88 },
-          { month: 'Jun', interviews: 4, avgScore: 90 }
-        ];
-
-        // Mock recent performance
-        const recentPerformance = interviews?.slice(0, 5).map((interview, index) => ({
-          ...interview,
-          score: Math.floor(Math.random() * 30) + 70,
-          feedback: `Great performance in ${interview.jobPosition} interview. ${index % 2 === 0 ? 'Strong technical skills demonstrated.' : 'Excellent communication and problem-solving approach.'}`
-        })) || [];
-
-        setAnalytics({
-          totalInterviews,
-          completedInterviews,
-          averageScore: completedInterviews > 0 ? Math.floor(Math.random() * 20) + 75 : 0,
-          totalPracticeTime,
-          improvementTrend: Math.floor(Math.random() * 20) + 10,
-          skillBreakdown,
-          monthlyProgress,
-          recentPerformance
-        });
+        if (response.ok) {
+          setAnalytics(analyticsData);
+        } else {
+          console.error('Error fetching analytics:', analyticsData.error);
+          // Handle authentication errors
+          if (response.status === 401) {
+            console.log('User not authenticated, redirecting to sign in');
+            // The layout will handle this by showing the landing page
+          }
+        }
         
       } catch (error) {
         console.error('Error fetching analytics data:', error);

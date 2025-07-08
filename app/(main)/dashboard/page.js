@@ -35,7 +35,10 @@ export default function Dashboard() {
   // Fetch user interviews and calculate stats
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!user?.id) return;
+      if (!user?.email) {
+        setLoadingData(false);
+        return;
+      }
 
       try {
         const supabase = createClient();
@@ -47,7 +50,11 @@ export default function Dashboard() {
           .eq('userEmail', user.email)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching interviews:', error);
+          setLoadingData(false);
+          return;
+        }
 
         setUserInterviews(interviews || []);
 

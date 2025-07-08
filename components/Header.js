@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useUser } from '@/context/UserContext';
+import { getUserDisplayName } from '@/utils/auth';
 import Image from 'next/image';
 
 export default function Header() {
@@ -10,8 +11,13 @@ export default function Header() {
   const { user, signOut, isAuthenticated } = useUser();
 
   const handleSignOut = async () => {
-    await signOut();
-    router.refresh();
+    try {
+      await signOut();
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
   };
 
   const handleSignIn = () => {
@@ -38,7 +44,7 @@ export default function Header() {
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-end mr-2">
               <span className="text-sm font-medium text-white">
-                {user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}
+                {getUserDisplayName(user)}
               </span>
               <span className="text-xs text-gray-400 hidden md:inline">
                 {user?.email}

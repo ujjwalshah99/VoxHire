@@ -11,6 +11,15 @@ import {
 export async function POST(request) {
   try {
     const data = await request.json();
+    
+    // Check if userEmail is provided (basic authentication check)
+    if (!data.userEmail) {
+      return NextResponse.json(
+        { error: 'Authentication required. Please sign in to create interviews.' },
+        { status: 401 }
+      );
+    }
+    
     const interview = await createInterview(data);
     return NextResponse.json(interview);
   } catch (error) {
@@ -26,6 +35,15 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const userEmail = searchParams.get('userEmail');
+    
+    // Check for authentication
+    if (!userEmail && !id) {
+      return NextResponse.json(
+        { error: 'Authentication required. Please sign in to access interviews.' },
+        { status: 401 }
+      );
+    }
     
     if (!id) {
       return NextResponse.json(
