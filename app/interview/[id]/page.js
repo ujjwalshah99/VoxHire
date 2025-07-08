@@ -16,6 +16,7 @@ export default function InterviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fullName, setFullName] = useState('');
+  const [candidateEmail, setCandidateEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const {interviewInfo , setInterviewInfo} = useContext(InterviewContext);
   const router = useRouter();
@@ -59,12 +60,12 @@ export default function InterviewPage() {
       alert('Please enter your full name');
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      const supabase = createClient();
-      let { data , error } = await supabase
+      const supabase = await createClient();
+      const { data , error } = await supabase
       .from("Interviews")
       .select("*")
       .eq("interview_id", interviewId)
@@ -74,20 +75,29 @@ export default function InterviewPage() {
         throw error;
       }
 
+
       if (data) {
-        setInterviewInfo({
+        // Create the interview data with candidate name
+        const interviewData = {
           ...data,
-          candidateName: fullName
-        });
-        router.push(`/interview/${interviewId}/start`);
+          candidateName: fullName,
+          candidateEmail: candidateEmail
+        };
+
+        // Set the interview info in context
+        setInterviewInfo(interviewData);
+
+        // Navigate using the data directly (not from state)
+        router.push(`/interview/${data.interview_id}/start`);
+        console.log(interviewData);
       } else {
         setError('Interview not found');
-      } 
+      }
     } catch (err) {
       console.error('Error joining interview:', err);
       setError('Failed to join interview');
       setIsSubmitting(false);
-    } 
+    }
   };
 
   if (loading) {
@@ -173,6 +183,21 @@ export default function InterviewPage() {
                 onChange={(e) => setFullName(e.target.value)}
                 required
                 placeholder="John Doe"
+                className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="candidateEmail" className="block text-sm font-medium text-gray-300 mb-2">
+                Enter your Email 
+              </label>
+              <input
+                type="text"
+                id="candidateEmail"
+                value={candidateEmail}
+                onChange={(e) => setCandidateEmail(e.target.value)}
+                required
+                placeholder="john@gmail.com"
                 className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
               />
             </div>

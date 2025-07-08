@@ -8,11 +8,11 @@ import { motion } from 'framer-motion';
 import { useUser } from '@/context/UserContext';
 import {
   HomeIcon,
-  CalendarIcon,
-  VideoCameraIcon,
-  CreditCardIcon,
   CogIcon,
-  PlusIcon
+  PlusIcon,
+  AcademicCapIcon,
+  ChartBarIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
 
 export default function Sidebar() {
@@ -45,9 +45,10 @@ export default function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Schedule Interview', href: '/schedule', icon: CalendarIcon },
-    { name: 'AI Interview', href: '/ai-interview', icon: VideoCameraIcon },
-    { name: 'Billing', href: '/billing', icon: CreditCardIcon },
+    { name: 'Create Interview', href: '/create-interview', icon: PlusIcon },
+    { name: 'Practice Mode', href: '/practice-mode', icon: AcademicCapIcon },
+    { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
+    { name: 'Profile', href: '/profile', icon: UserIcon },
     { name: 'Settings', href: '/settings', icon: CogIcon },
   ];
 

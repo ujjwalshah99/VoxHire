@@ -185,6 +185,23 @@ export default function CreateInterview() {
     }
   };
 
+  const handleRegenerateQuestions = async () => {
+    setIsSubmitting(true);
+
+    try {
+      let questions = await axios.post("/api/ai-model", {
+        ...formData
+      });
+      const final_question = questions.data.replace('```json', '').replace('```', '');
+      const final = JSON.parse(final_question);
+      setGeneratedQuestions(final.interviewQuestions);
+      setIsSubmitting(false);
+    } catch(err) {
+      console.log(err);
+      setIsSubmitting(false);
+    }
+  };
+
 
 
   const handleCreateInterview = async () => {
@@ -283,7 +300,7 @@ export default function CreateInterview() {
       `You have been invited to an interview for the ${formData.jobPosition} position.\n\n` +
       `Please use the following link to access your interview: ${interviewLink}\n\n` +
       `The interview will take approximately ${formData.duration} minutes to complete.\n\n` +
-      `This link is valid for 30 days.`
+      `This link is valid for 30 days.\n\n` +
       `Best regards,\n${user?.email || 'The Hiring Team'}`
     );
     window.open(`https://wa.me/?text=${text}`);
@@ -627,6 +644,22 @@ export default function CreateInterview() {
             )}
           </div>
 
+          {/* Regenerate Questions Button */}
+          {!isSubmitting && generatedQuestions.length > 0 && (
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={handleRegenerateQuestions}
+                disabled={isSubmitting}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors text-white font-medium flex items-center"
+              >
+                <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Regenerate Questions
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-between">
             <button
               onClick={handleBack}
@@ -749,7 +782,16 @@ export default function CreateInterview() {
             </div>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => window.open(interviewLink, '_blank')}
+              className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-white font-medium flex items-center"
+            >
+              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open Interview
+            </button>
             <button
               onClick={handleFinish}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white font-medium"
