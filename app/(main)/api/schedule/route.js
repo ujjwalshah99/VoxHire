@@ -19,7 +19,7 @@ export async function GET(request) {
     
     // Build query for scheduled interviews
     let query = supabase
-      .from('Interviews')
+      .from('interviews')
       .select('*')
       .eq('userEmail', userEmail)
       .not('scheduled_for', 'is', null);
@@ -88,7 +88,7 @@ export async function POST(request) {
     
     // Update interview with schedule information
     const { data: updatedInterview, error } = await supabase
-      .from('Interviews')
+      .from('interviews')
       .update({
         scheduled_for: scheduled_for,
         timezone: timezone || 'UTC',
@@ -142,7 +142,7 @@ export async function PUT(request) {
         }
         
         const { data: rescheduled, error: rescheduleError } = await supabase
-          .from('Interviews')
+          .from('interviews')
           .update({
             scheduled_for: new_scheduled_for,
             timezone: timezone || 'UTC',
@@ -160,7 +160,7 @@ export async function PUT(request) {
         
       case 'cancel':
         const { data: cancelled, error: cancelError } = await supabase
-          .from('Interviews')
+          .from('interviews')
           .update({
             status: 'cancelled',
             scheduled_for: null,
@@ -178,7 +178,7 @@ export async function PUT(request) {
         
       case 'mark_completed':
         const { data: completed, error: completeError } = await supabase
-          .from('Interviews')
+          .from('interviews')
           .update({
             status: 'completed',
             completed_at: new Date().toISOString(),

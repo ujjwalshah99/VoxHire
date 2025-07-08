@@ -13,7 +13,8 @@ import {
   PlusIcon,
   AcademicCapIcon,
   ChartBarIcon,
-  UserIcon
+  UserIcon,
+  CreditCardIcon
 } from '@heroicons/react/24/outline';
 
 export default function Sidebar() {
@@ -55,6 +56,7 @@ export default function Sidebar() {
     { name: 'Practice Mode', href: '/practice-mode', icon: AcademicCapIcon },
     { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
     { name: 'Profile', href: '/profile', icon: UserIcon },
+    { name: 'Billing', href: '/billing', icon: CreditCardIcon },
     { name: 'Settings', href: '/settings', icon: CogIcon },
   ];
 

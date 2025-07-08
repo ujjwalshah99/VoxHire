@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserByEmail, createOrUpdateUser, updateUserCredits } from '@/utils/database/operations';
+import { getUserBillingInfo } from '@/utils/userUtils';
 
 export async function GET(request) {
   try {
@@ -13,21 +14,17 @@ export async function GET(request) {
       );
     }
 
-    const user = await getUserByEmail(userEmail);
+    // Use the utility function to get billing info
+    const billingInfo = await getUserBillingInfo(userEmail);
     
-    // Return billing information
-    return NextResponse.json({
-      email: user?.email || userEmail,
-      credits: user?.credits || 0,
-      subscription_tier: user?.subscription_tier || 'free',
-      subscription_expires_at: user?.subscription_expires_at,
-      billing_info: {
-        current_plan: user?.subscription_tier || 'free',
-        credits_remaining: user?.credits || 0,
-        next_billing_date: user?.subscription_expires_at,
-        features: getPlanFeatures(user?.subscription_tier || 'free')
-      }
-    });
+    if (!billingInfo) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(billingInfo);
   } catch (error) {
     console.error('Error fetching billing info:', error);
     return NextResponse.json(

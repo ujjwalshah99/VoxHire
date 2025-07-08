@@ -30,6 +30,8 @@ import {
 
 export default function CreateInterview() {
   const router = useRouter();
+  const { user, isLoading, isAuthenticated } = useUser();
+
   const [formData, setFormData] = useState({
     jobPosition: '',
     jobDescription: '',
@@ -51,7 +53,21 @@ export default function CreateInterview() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [interviewLink, setInterviewLink] = useState('');
   const [linkCopied, setLinkCopied] = useState(false);
-  const { user } = useUser();
+
+  // Redirect to sign in if not authenticated
+  if (!isLoading && !isAuthenticated) {
+    router.push('/auth/signin');
+    return null;
+  }
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   const jobRoleSuggestions = [
     'Frontend Developer',
@@ -205,6 +221,17 @@ export default function CreateInterview() {
 
 
   const handleCreateInterview = async () => {
+    if (!user?.email) {
+      alert("You must be signed in to create an interview. Please sign in and try again.");
+      router.push('/auth/signin');
+      return;
+    }
+
+    if (!generatedQuestions || generatedQuestions.length === 0) {
+      alert("Please generate questions before creating the interview.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const interview_id = uuidv4();
@@ -216,11 +243,10 @@ export default function CreateInterview() {
       }
     }
 
-
     const interview = {
       jobPosition : formData.jobPosition,
       jobDescription: formData.jobDescription,
-      duration: formData.duration,
+      duration: parseInt(formData.duration), // Ensure it's an integer
       difficultyLevel: formData.difficultyLevel,
       interview_id: interview_id,
       questionList: generatedQuestions,
@@ -228,22 +254,34 @@ export default function CreateInterview() {
       userEmail : user?.email
     };
 
-    // Here you would typically send the data to your backend
-    console.log('Interview created:', interview);
+    console.log('Creating interview:', interview);
 
-    try{
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("Interviews")
-        .insert(interview)
-        .select();
+    try {
+      // Use the API endpoint instead of direct Supabase call
+      const response = await fetch('/api/interview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(interview)
+      });
 
-      if (error) {
-        console.error("Error saving interview:", error);
-        alert("There was an error creating the interview. Please try again.");
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API Error:", errorData);
+        
+        if (response.status === 401) {
+          alert("Authentication required. Please sign in and try again.");
+          router.push('/auth/signin');
+        } else {
+          alert(errorData.error || "There was an error creating the interview. Please try again.");
+        }
         setIsSubmitting(false);
         return;
       }
+
+      const result = await response.json();
+      console.log('Interview created successfully:', result);
 
       // Generate interview link
       const baseUrl = window.location.origin;
@@ -255,7 +293,7 @@ export default function CreateInterview() {
     }
     catch(err) {
       console.error("Error creating interview:", err);
-      alert("There was an error creating the interview. Please try again.");
+      alert(`Network error: ${err.message}. Please check your connection and try again.`);
       setIsSubmitting(false);
     }
   };

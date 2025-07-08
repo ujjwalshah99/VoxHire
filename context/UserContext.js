@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { ensureUserExists } from '@/utils/userUtils';
 
 // Create the context
 const UserContext = createContext(undefined);
@@ -35,23 +36,35 @@ export function UserProvider({ children }) {
       }
       
       if (user) {
-        // Get additional user data from the database if needed
-        const { data: userData, error: userError } = await supabase
-          .from('Users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (userError && userError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-          console.error('Error fetching user data:', userError);
-        }
+        console.log('Auth user found:', user.email);
         
-        // Combine auth user with database user data
-        setUser({
-          ...user,
-          userData: userData || null
-        });
+        try {
+          // Try to ensure user exists in our database
+          const userData = await ensureUserExists(user);
+          console.log('User data from database:', userData);
+          
+          // Combine auth user with database user data
+          setUser({
+            ...user,
+            userData: userData
+          });
+        } catch (userCreationError) {
+          console.error('Error ensuring user exists:', userCreationError);
+          
+          // Fallback: still set the auth user even if database creation fails
+          // This prevents the app from being completely broken
+          setUser({
+            ...user,
+            userData: {
+              email: user.email,
+              name: user.user_metadata?.full_name || user.email,
+              credits: 10,
+              subscription_tier: 'free'
+            }
+          });
+        }
       } else {
+        console.log('No authenticated user');
         setUser(null);
       }
     } catch (err) {

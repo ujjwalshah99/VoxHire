@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { transformToCamelCase } from "@/utils/caseTransforms";
 import {
   VideoCameraIcon,
   ClockIcon,
@@ -36,34 +37,40 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchUserData = async () => {
       if (!user?.email) {
+        console.log('No user email, skipping data fetch');
         setLoadingData(false);
         return;
       }
 
       try {
+        console.log('Fetching data for user:', user.email);
         const supabase = createClient();
 
         // Fetch user's interviews
         const { data: interviews, error } = await supabase
-          .from('Interviews')
+          .from('interviews')
           .select('*')
-          .eq('userEmail', user.email)
+          .eq('user_email', user.email)
           .order('created_at', { ascending: false });
 
         if (error) {
           console.error('Error fetching interviews:', error);
-          setLoadingData(false);
-          return;
+          // Don't return here, continue with empty array
+          setUserInterviews([]);
+        } else {
+          console.log('Fetched interviews:', interviews);
+          // Transform snake_case to camelCase for frontend
+          const transformedInterviews = interviews ? interviews.map(interview => transformToCamelCase(interview)) : [];
+          setUserInterviews(transformedInterviews);
         }
 
-        setUserInterviews(interviews || []);
-
-        // Calculate user statistics
-        const totalInterviews = interviews?.length || 0;
-        const completedInterviews = interviews?.filter(interview => interview.status === 'completed').length || 0;
-        const totalPracticeTime = interviews?.reduce((total, interview) => {
+        // Calculate user statistics (use empty array if interviews is null)
+        const interviewsArray = interviews ? interviews.map(interview => transformToCamelCase(interview)) : [];
+        const totalInterviews = interviewsArray.length;
+        const completedInterviews = interviewsArray.filter(interview => interview.status === 'completed').length;
+        const totalPracticeTime = interviewsArray.reduce((total, interview) => {
           return total + (parseInt(interview.duration) || 0);
-        }, 0) || 0;
+        }, 0);
 
         setUserStats({
           totalInterviews,
@@ -73,8 +80,23 @@ export default function Dashboard() {
           skillsImproved: Math.floor(completedInterviews / 2)
         });
 
+        console.log('User stats calculated:', {
+          totalInterviews,
+          completedInterviews,
+          totalPracticeTime
+        });
+
       } catch (error) {
         console.error('Error fetching user data:', error);
+        // Set default values instead of leaving undefined
+        setUserInterviews([]);
+        setUserStats({
+          totalInterviews: 0,
+          completedInterviews: 0,
+          averageScore: 0,
+          totalPracticeTime: 0,
+          skillsImproved: 0
+        });
       } finally {
         setLoadingData(false);
       }
@@ -256,9 +278,10 @@ export default function Dashboard() {
 
         {userInterviews.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {userInterviews.map((interview, index) => (
+            {userInterviews.map((interview, index) => {
+              return (
               <motion.div
-                key={interview.interview_id}
+                key={interview.interviewId}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * (index + 1), duration: 0.5 }}
@@ -276,7 +299,7 @@ export default function Dashboard() {
                     <div>
                       <p className="text-gray-400 text-xs">Created</p>
                       <p className="text-white text-sm font-medium">
-                        {new Date(interview.created_at).toLocaleDateString()}
+                        {new Date(interview.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -316,13 +339,13 @@ export default function Dashboard() {
 
                 <div className="flex space-x-2 mt-4">
                   <button
-                    onClick={() => copyToClipboard(`${window.location.origin}/interview/${interview.interview_id}`)}
+                    onClick={() => copyToClipboard(`${window.location.origin}/interview/${interview.interviewId}`)}
                     className="flex-1 flex items-center justify-center py-2 px-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-sm"
                   >
                     <DocumentDuplicateIcon className="h-4 w-4 mr-2" />
                     Copy Link
                   </button>
-                  <Link href={`/interview/${interview.interview_id}/details`} className="flex-1">
+                  <Link href={`/interview/${interview.interviewId}/details`} className="flex-1">
                     <button className="w-full flex items-center justify-center py-2 px-3 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors text-sm">
                       <EyeIcon className="h-4 w-4 mr-2" />
                       View Details
@@ -330,7 +353,8 @@ export default function Dashboard() {
                   </Link>
                 </div>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <motion.div

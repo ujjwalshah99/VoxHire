@@ -2,6 +2,7 @@
 
 import Vapi from "@vapi-ai/web";
 import {InterviewContext} from '@/context/InterviewContext';
+import { useUser } from "@/context/UserContext";
 import { useContext } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,6 +21,7 @@ import {
 export default function interviewInfoStartPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useUser();
   const interviewId = params.id;
   const VAPI_API_KEY = process.env.NEXT_PUBLIC_VAPI_API_KEY;
 
@@ -42,6 +44,11 @@ export default function interviewInfoStartPage() {
   const [interviewStarted, setInterviewStarted] = useState(false);
   const [currentAiMessage, setCurrentAiMessage] = useState('');
   const [currentUserMessage, setCurrentUserMessage] = useState('');
+  
+  // Conversation tracking
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [interviewQuestions, setInterviewQuestions] = useState([]);
+  const [userResponses, setUserResponses] = useState([]);
 
 
 
@@ -135,12 +142,30 @@ export default function interviewInfoStartPage() {
             if (message.role === "assistant") {
               // Show AI messages in real-time (both partial and final)
               setCurrentAiMessage(message.transcript);
+              
+              // Store final AI messages (questions) in conversation history
+              if (message.transcriptType === "final") {
+                setConversationHistory(prev => [...prev, {
+                  role: 'assistant',
+                  content: message.transcript,
+                  timestamp: new Date().toISOString()
+                }]);
+                setInterviewQuestions(prev => [...prev, message.transcript]);
+              }
             } else if (message.role === "user") {
               // Show user messages in real-time (both partial and final)
               setCurrentUserMessage(message.transcript);
 
-              // Increment question counter only on final transcript
+              // Store final user responses in conversation history
               if (message.transcriptType === "final") {
+                setConversationHistory(prev => [...prev, {
+                  role: 'user',
+                  content: message.transcript,
+                  timestamp: new Date().toISOString()
+                }]);
+                setUserResponses(prev => [...prev, message.transcript]);
+                
+                // Increment question counter only on final transcript
                 if (currentQuestion < (interviewInfo?.questionList?.length || 5) - 1) {
                   setCurrentQuestion(prev => prev + 1);
                 }
@@ -881,7 +906,7 @@ export default function interviewInfoStartPage() {
         <div className="max-w-4xl mx-auto flex justify-center">
           {interviewInfoComplete ? (
             <motion.button
-              onClick={() => {
+              onClick={async () => {
                 // Ensure Vapi call is stopped
                 try {
                   if (vapiRef.current) {
@@ -891,8 +916,24 @@ export default function interviewInfoStartPage() {
                   // Silent error handling
                 }
 
-                // Navigate to dashboard
-                router.push('/dashboard');
+                // Update interview status to completed
+                try {
+                  await fetch('/api/interview', {
+                    method: 'PUT',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      interview_id: interviewId,
+                      status: 'completed'
+                    }),
+                  });
+                } catch (err) {
+                  console.error('Error updating interview status:', err);
+                }
+
+                // Navigate to interview details page
+                router.push(`/interview/${interviewId}/details`);
               }}
               className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 flex items-center shadow-lg"
               whileHover={{ scale: 1.05, boxShadow: "0 10px 25px rgba(34, 197, 94, 0.3)" }}
@@ -935,7 +976,7 @@ export default function interviewInfoStartPage() {
               </motion.button>
 
               <motion.button
-                onClick={() => {
+                onClick={async () => {
                   // Stop the timer
                   setTimerActive(false);
 
@@ -948,8 +989,64 @@ export default function interviewInfoStartPage() {
                     // Silent error handling
                   }
 
-                  // Navigate back to the interview landing page
-                  router.push(`/interview/${interviewId}`);
+                  // Generate analytics from the conversation
+                  try {
+                    if (conversationHistory.length > 0 || userResponses.length > 0) {
+                      const conversationData = {
+                        questions: interviewQuestions,
+                        answers: userResponses,
+                        conversation_history: conversationHistory,
+                        interview_duration: timer,
+                        questions_attempted: userResponses.length,
+                        job_position: interviewInfo?.jobPosition || '',
+                        difficulty_level: interviewInfo?.difficultyLevel || '',
+                        metadata: {
+                          total_time: timer,
+                          questions_count: interviewQuestions.length,
+                          responses_count: userResponses.length,
+                          started_at: new Date(Date.now() - timer * 1000).toISOString(),
+                          ended_at: new Date().toISOString()
+                        }
+                      };
+
+                      console.log('Sending conversation for analysis:', conversationData);
+
+                      // Send conversation to analytics API for processing
+                      await fetch('/api/analytics', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          interview_id: interviewId,
+                          conversation: conversationData,
+                          userEmail: user?.email || 'unknown'
+                        }),
+                      });
+                    }
+                  } catch (analyticsError) {
+                    console.error('Error generating analytics:', analyticsError);
+                    // Continue even if analytics fail
+                  }
+
+                  // Update interview status to completed (not just ended)
+                  try {
+                    await fetch('/api/interview', {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        interview_id: interviewId,
+                        status: 'completed'
+                      }),
+                    });
+                  } catch (err) {
+                    console.error('Error updating interview status:', err);
+                  }
+
+                  // Navigate to interview details page
+                  router.push(`/interview/${interviewId}/details`);
                 }}
                 className="px-6 py-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-white font-semibold rounded-xl transition-all duration-300 flex items-center shadow-lg border border-gray-600/50"
                 whileHover={{ scale: 1.05, boxShadow: "0 10px 25px rgba(107, 114, 128, 0.3)" }}

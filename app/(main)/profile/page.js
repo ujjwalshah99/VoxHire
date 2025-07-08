@@ -49,9 +49,9 @@ export default function Profile() {
         
         // Fetch user's interviews
         const { data: interviews, error } = await supabase
-          .from('Interviews')
+          .from('interviews')
           .select('*')
-          .eq('userEmail', user.email)
+          .eq('user_email', user.email)
           .order('created_at', { ascending: false });
 
         if (error) throw error;

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useUser } from "@/context/UserContext";
 import {
   ArrowLeftIcon,
   ClockIcon,
@@ -25,6 +26,7 @@ export default function InterviewDetails() {
   const params = useParams();
   const router = useRouter();
   const interviewId = params.id;
+  const { user } = useUser();
   
   const [interview, setInterview] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,22 +36,66 @@ export default function InterviewDetails() {
     async function fetchData() {
       setLoading(true);
       try {
-        // Fetch interview details
-        const interviewRes = await fetch(`/api/interview?id=${interviewId}`);
-        const interviewData = await interviewRes.json();
-        setInterview(interviewData);
-        // Fetch analytics for this interview
-        const analyticsRes = await fetch(`/api/analytics?interview_id=${interviewId}`);
-        const analyticsData = await analyticsRes.json();
-        setAnalytics(analyticsData);
+        console.log('Fetching interview data for ID:', interviewId);
+        
+        // Add timeout to prevent hanging
+        const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
+          
+          try {
+            const response = await fetch(url, {
+              ...options,
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            return response;
+          } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+              throw new Error('Request timed out');
+            }
+            throw error;
+          }
+        };
+        
+        // Fetch interview details with timeout
+        const interviewRes = await fetchWithTimeout(`/api/interview?id=${interviewId}`);
+        console.log('Interview API response status:', interviewRes.status);
+        
+        if (interviewRes.ok) {
+          const interviewData = await interviewRes.json();
+          console.log('Interview data received:', interviewData);
+          setInterview(interviewData);
+        } else {
+          const errorText = await interviewRes.text();
+          console.error('Failed to fetch interview:', errorText);
+          setInterview(null);
+        }
+        
+        // Fetch analytics for this interview with timeout
+        console.log('Fetching analytics for interview ID:', interviewId);
+        const analyticsUrl = `/api/analytics?interview_id=${interviewId}`;
+        const analyticsRes = await fetchWithTimeout(analyticsUrl);
+        console.log('Analytics API response status:', analyticsRes.status);
+        
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json();
+          console.log('Analytics data received:', analyticsData);
+          setAnalytics(analyticsData);
+        } else {
+          console.log('No analytics data available or error fetching analytics:', await analyticsRes.text());
+          setAnalytics(null);
+        }
       } catch (err) {
+        console.error('Error fetching data:', err);
         setInterview(null);
         setAnalytics(null);
       }
       setLoading(false);
     }
     if (interviewId) fetchData();
-  }, [interviewId]);
+  }, [interviewId, user]);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -86,8 +132,28 @@ export default function InterviewDetails() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading interview details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!interview) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">Interview Not Found</h2>
+          <p className="text-gray-400 mb-6">The requested interview could not be found or you don't have access to it.</p>
+          <Link href="/dashboard">
+            <button className="px-6 py-3 bg-blue-600 rounded-lg text-white font-medium hover:bg-blue-700 transition-all">
+              Back to Dashboard
+            </button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -188,7 +254,7 @@ export default function InterviewDetails() {
         </motion.div>
 
         {/* Performance Results */}
-        {analytics && (
+        {analytics ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -198,19 +264,90 @@ export default function InterviewDetails() {
             <h2 className="text-xl font-semibold mb-6 flex items-center">
               <ChartBarIcon className="h-6 w-6 mr-2 text-blue-400" />
               Performance Analysis
+              {analytics.is_preview && (
+                <span className="ml-3 px-2 py-1 bg-orange-600/20 border border-orange-500/30 rounded text-orange-400 text-xs">
+                  Preview
+                </span>
+              )}
+              {analytics.is_processing && (
+                <span className="ml-3 px-2 py-1 bg-blue-600/20 border border-blue-500/30 rounded text-blue-400 text-xs">
+                  Processing...
+                </span>
+              )}
+              {analytics.is_generated && !analytics.is_preview && !analytics.is_processing && (
+                <span className="ml-3 px-2 py-1 bg-green-600/20 border border-green-500/30 rounded text-green-400 text-xs">
+                  AI Generated
+                </span>
+              )}
             </h2>
+
+            {/* Preview/Processing Data Banner */}
+            {analytics.is_preview && (
+              <div className="bg-orange-600/10 border border-orange-500/20 rounded-lg p-4 mb-6">
+                <div className="flex items-center">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-orange-400 mr-2 flex-shrink-0" />
+                  <div>
+                    <p className="text-orange-400 font-medium text-sm">
+                      Interview Not Yet Taken
+                    </p>
+                    <p className="text-gray-300 text-sm mt-1">
+                      This is a preview showing what your analytics will look like. All scores are currently 0 because you haven't taken the interview yet.
+                      {interview?.status === 'pending' ? ' Click "Start Interview" below to begin and get your actual results.' : ' Complete the interview to see your real performance metrics.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {analytics.is_processing && (
+              <div className="bg-blue-600/10 border border-blue-500/20 rounded-lg p-4 mb-6">
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500 mr-2 flex-shrink-0"></div>
+                  <div>
+                    <p className="text-blue-400 font-medium text-sm">
+                      Analyzing Your Performance
+                    </p>
+                    <p className="text-gray-300 text-sm mt-1">
+                      Our AI is analyzing your interview responses to generate detailed feedback and scores. This may take a few moments. Please refresh the page in a minute to see your results.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Overall Score */}
             <div className="text-center mb-8">
-              <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full border-4 ${getScoreBg(analytics.total_score)}`}>
+              <div className={`inline-flex items-center justify-center w-32 h-32 rounded-full border-4 ${analytics.is_preview ? 'bg-gray-600/20 border-gray-500/30' : getScoreBg(analytics.total_score)}`}>
                 <div className="text-center">
-                  <p className={`text-3xl font-bold ${getScoreColor(analytics.total_score)}`}>
+                  <p className={`text-3xl font-bold ${analytics.is_preview ? 'text-gray-400' : getScoreColor(analytics.total_score)}`}>
                     {analytics.total_score}%
                   </p>
                   <p className="text-gray-400 text-sm">Overall Score</p>
                 </div>
               </div>
             </div>
+
+            {/* Performance Breakdown - Only show if not preview or if scores > 0 */}
+            {(!analytics.is_preview || (analytics.technical_score > 0 || analytics.communication_score > 0 || analytics.problem_solving_score > 0 || analytics.confidence_score > 0)) && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center p-3 bg-gray-700/30 rounded-lg">
+                  <p className={`text-2xl font-bold ${analytics.is_preview ? 'text-gray-400' : 'text-blue-400'}`}>{analytics.technical_score}%</p>
+                  <p className="text-gray-400 text-sm">Technical</p>
+                </div>
+                <div className="text-center p-3 bg-gray-700/30 rounded-lg">
+                  <p className={`text-2xl font-bold ${analytics.is_preview ? 'text-gray-400' : 'text-green-400'}`}>{analytics.communication_score}%</p>
+                  <p className="text-gray-400 text-sm">Communication</p>
+                </div>
+                <div className="text-center p-3 bg-gray-700/30 rounded-lg">
+                  <p className={`text-2xl font-bold ${analytics.is_preview ? 'text-gray-400' : 'text-purple-400'}`}>{analytics.problem_solving_score}%</p>
+                  <p className="text-gray-400 text-sm">Problem Solving</p>
+                </div>
+                <div className="text-center p-3 bg-gray-700/30 rounded-lg">
+                  <p className={`text-2xl font-bold ${analytics.is_preview ? 'text-gray-400' : 'text-orange-400'}`}>{analytics.confidence_score}%</p>
+                  <p className="text-gray-400 text-sm">Confidence</p>
+                </div>
+              </div>
+            )}
 
             {/* Feedback */}
             <div className="bg-blue-600/10 border border-blue-500/20 rounded-lg p-4 mb-6">
@@ -252,6 +389,23 @@ export default function InterviewDetails() {
                   ))}
                 </ul>
               </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border border-gray-700/50"
+          >
+            <h2 className="text-xl font-semibold mb-6 flex items-center">
+              <ChartBarIcon className="h-6 w-6 mr-2 text-blue-400" />
+              Performance Analysis
+            </h2>
+            
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-400">Loading analytics...</p>
             </div>
           </motion.div>
         )}

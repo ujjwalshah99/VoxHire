@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
+import { transformToCamelCase } from '@/utils/caseTransforms';
 import {InterviewContext} from '@/context/InterviewContext';
 import { useContext } from 'react';
 import { useRouter } from 'next/navigation';
@@ -27,8 +28,8 @@ export default function InterviewPage() {
         setLoading(true);
         const supabase = createClient();
         const { data, error } = await supabase
-          .from('Interviews')
-          .select('jobPosition, duration, difficultyLevel')
+          .from('interviews')
+          .select('job_position, duration, difficulty_level')
           .eq('interview_id', interviewId)
           .single();
 
@@ -37,7 +38,13 @@ export default function InterviewPage() {
         }
 
         if (data) {
-          setInterview(data);
+          // Transform snake_case to camelCase for frontend
+          const transformedData = {
+            jobPosition: data.job_position,
+            duration: data.duration,
+            difficultyLevel: data.difficulty_level
+          };
+          setInterview(transformedData);
         } else {
           setError('Interview not found');
         }
@@ -66,7 +73,7 @@ export default function InterviewPage() {
     try {
       const supabase = await createClient();
       const { data , error } = await supabase
-      .from("Interviews")
+      .from("interviews")
       .select("*")
       .eq("interview_id", interviewId)
       .single();
@@ -77,9 +84,9 @@ export default function InterviewPage() {
 
 
       if (data) {
-        // Create the interview data with candidate name
+        // Transform snake_case to camelCase for frontend
         const interviewData = {
-          ...data,
+          ...transformToCamelCase(data),
           candidateName: fullName,
           candidateEmail: candidateEmail
         };
