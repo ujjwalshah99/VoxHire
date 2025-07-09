@@ -265,8 +265,22 @@ Set all scores to 0 since no interview has been taken yet.`;
     }
 
     const interviews = await getUserInterviews(userEmail);
-    const practiceSessions = await getUserPracticeSessions(userEmail);
-    const detailedPerformance = await getDetailedPerformanceAnalytics(userEmail);
+    
+    // Safely attempt to get practice sessions (table might not exist)
+    let practiceSessions = [];
+    try {
+      practiceSessions = await getUserPracticeSessions(userEmail);
+    } catch (error) {
+      console.log('Practice sessions table not found, using empty array:', error.message);
+    }
+    
+    // Safely attempt to get detailed performance analytics
+    let detailedPerformance = [];
+    try {
+      detailedPerformance = await getDetailedPerformanceAnalytics(userEmail);
+    } catch (error) {
+      console.log('Performance analytics table not found, using empty array:', error.message);
+    }
     
     // Calculate analytics including practice sessions
     const analytics = {
@@ -309,7 +323,13 @@ Set all scores to 0 since no interview has been taken yet.`;
       
       if (interview.status === 'completed') {
         try {
-          const interviewAnalytics = await getInterviewAnalytics(interview.interview_id);
+          let interviewAnalytics = null;
+          try {
+            interviewAnalytics = await getInterviewAnalytics(interview.interview_id);
+          } catch (error) {
+            console.log('Interview analytics table not found for interview:', interview.interview_id);
+          }
+          
           const performanceAnalytics = detailedPerformance.find(p => p.interview_id === interview.interview_id);
           
           if (interviewAnalytics && interviewAnalytics.overall_score) {
@@ -392,13 +412,21 @@ Set all scores to 0 since no interview has been taken yet.`;
     // Calculate averages
     analytics.averageScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
     
+    // Calculate completion rate
+    analytics.completionRate = analytics.totalInterviews > 0 ? 
+      Math.round((analytics.completedInterviews / analytics.totalInterviews) * 100) : 0;
+    
     // Calculate skill breakdown
     analytics.skillBreakdown = {
-      technical: skillCounts.technical > 0 ? Math.round(skillTotals.technical / skillCounts.technical) : Math.floor(Math.random() * 20) + 75,
-      behavioral: skillCounts.behavioral > 0 ? Math.round(skillTotals.behavioral / skillCounts.behavioral) : Math.floor(Math.random() * 20) + 70,
-      experience: Math.floor(Math.random() * 20) + 80, // Mock for now
-      problemSolving: skillCounts.problemSolving > 0 ? Math.round(skillTotals.problemSolving / skillCounts.problemSolving) : Math.floor(Math.random() * 20) + 75,
-      leadership: skillCounts.leadership > 0 ? Math.round(skillTotals.leadership / skillCounts.leadership) : Math.floor(Math.random() * 20) + 70
+      technical: skillCounts.technical > 0 ? Math.round(skillTotals.technical / skillCounts.technical) : 
+        (analytics.completedInterviews > 0 ? Math.floor(Math.random() * 20) + 75 : 0),
+      behavioral: skillCounts.behavioral > 0 ? Math.round(skillTotals.behavioral / skillCounts.behavioral) : 
+        (analytics.completedInterviews > 0 ? Math.floor(Math.random() * 20) + 70 : 0),
+      experience: analytics.completedInterviews > 0 ? Math.floor(Math.random() * 20) + 80 : 0, // Mock for now
+      problemSolving: skillCounts.problemSolving > 0 ? Math.round(skillTotals.problemSolving / skillCounts.problemSolving) : 
+        (analytics.completedInterviews > 0 ? Math.floor(Math.random() * 20) + 75 : 0),
+      leadership: skillCounts.leadership > 0 ? Math.round(skillTotals.leadership / skillCounts.leadership) : 
+        (analytics.completedInterviews > 0 ? Math.floor(Math.random() * 20) + 70 : 0)
     };
 
     // Sort recent performance by date

@@ -116,7 +116,7 @@ export async function updateInterviewStatus(interviewId, status, feedback = null
 export async function saveInterviewAnalytics(analytics) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('interviewanalytics')
+    .from('interview_analytics')
     .insert(analytics)
     .select();
 
@@ -127,21 +127,28 @@ export async function saveInterviewAnalytics(analytics) {
 export async function getInterviewAnalytics(interviewId) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('interviewanalytics')
+    .from('interview_analytics')
     .select('*')
     .eq('interview_id', interviewId)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    // If table doesn't exist, return null
+    if (error.code === '42P01') {
+      console.log('Interview analytics table does not exist');
+      return null;
+    }
+    throw error;
+  }
   return data;
 }
 
 export async function getUserProfile(userEmail) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('userprofiles')
+    .from('user_profiles')
     .select('*')
-    .eq('userEmail', userEmail)
+    .eq('user_email', userEmail)
     .single();
   if (error) throw error;
   return data;
@@ -150,8 +157,8 @@ export async function getUserProfile(userEmail) {
 export async function updateUserProfile(userEmail, updates) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('userprofiles')
-    .upsert({ userEmail, ...updates }, { onConflict: ['userEmail'] })
+    .from('user_profiles')
+    .upsert({ user_email: userEmail, ...updates }, { onConflict: ['user_email'] })
     .select();
   if (error) throw error;
   return data;
@@ -163,7 +170,7 @@ export async function savePerformanceAnalytics(performanceData) {
   // Prepare the data with all new fields
   const enhancedData = {
     interview_id: performanceData.interview_id,
-    userEmail: performanceData.userEmail,
+    user_email: performanceData.userEmail,
     questions: performanceData.questions || [],
     answers: performanceData.answers || [],
     // AI Performance Analysis
@@ -187,7 +194,7 @@ export async function savePerformanceAnalytics(performanceData) {
   };
 
   const { data, error } = await supabase
-    .from('performanceanalytics')
+    .from('performance_analytics')
     .insert(enhancedData)
     .select();
 
@@ -198,7 +205,7 @@ export async function savePerformanceAnalytics(performanceData) {
 export async function getPerformanceAnalytics(interviewId) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('performanceanalytics')
+    .from('performance_analytics')
     .select('*')
     .eq('interview_id', interviewId)
     .single();
@@ -212,13 +219,13 @@ export async function deleteInterview(interviewId) {
   console.log('Attempting to delete interview with id:', interviewId);
   // Delete related performance analytics
   const perfDel = await supabase
-    .from('performanceanalytics')
+    .from('performance_analytics')
     .delete()
     .eq('interview_id', interviewId);
   console.log('Deleted PerformanceAnalytics:', perfDel);
   // Delete related analytics
   const analyticsDel = await supabase
-    .from('interviewanalytics')
+    .from('interview_analytics')
     .delete()
     .eq('interview_id', interviewId);
   console.log('Deleted InterviewAnalytics:', analyticsDel);
@@ -239,7 +246,7 @@ export async function deleteInterview(interviewId) {
 export async function savePracticeSession(sessionData) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('practicesessions')
+    .from('practice_sessions')
     .insert(sessionData)
     .select();
 
@@ -250,19 +257,26 @@ export async function savePracticeSession(sessionData) {
 export async function getUserPracticeSessions(userEmail) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('practicesessions')
+    .from('practice_sessions')
     .select('*')
-    .eq('userEmail', userEmail)
+    .eq('user_email', userEmail)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    // If table doesn't exist, return empty array
+    if (error.code === '42P01') {
+      console.log('Practice sessions table does not exist');
+      return [];
+    }
+    throw error;
+  }
   return data;
 }
 
 export async function getPracticeSessionById(sessionId) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from('practicesessions')
+    .from('practice_sessions')
     .select('*')
     .eq('session_id', sessionId)
     .single();
@@ -279,23 +293,23 @@ export async function getUserAnalyticsSummary(userEmail) {
   const { data: interviews, error: interviewError } = await supabase
     .from('interviews')
     .select('*')
-    .eq('userEmail', userEmail);
+    .eq('user_email', userEmail);
   
   if (interviewError) throw interviewError;
 
   // Get all user practice sessions
   const { data: practiceSessions, error: practiceError } = await supabase
-    .from('practicesessions')
+    .from('practice_sessions')
     .select('*')
-    .eq('userEmail', userEmail);
+    .eq('user_email', userEmail);
   
   if (practiceError && practiceError.code !== 'PGRST116') throw practiceError; // Ignore table not found
 
   // Get interview analytics
   const { data: analytics, error: analyticsError } = await supabase
-    .from('interviewanalytics')
+    .from('interview_analytics')
     .select('*')
-    .eq('userEmail', userEmail);
+    .eq('user_email', userEmail);
   
   if (analyticsError) throw analyticsError;
 
@@ -344,22 +358,29 @@ export async function getDetailedPerformanceAnalytics(userEmail) {
   
   // Get all performance analytics for the user with interview details
   const { data, error } = await supabase
-    .from('performanceanalytics')
+    .from('performance_analytics')
     .select(`
       *,
-      Interviews!inner(
+      interviews!inner(
         interview_id,
-        jobPosition,
+        job_position,
         duration,
         status,
         created_at,
-        scheduledDate
+        scheduled_date
       )
     `)
-    .eq('userEmail', userEmail)
+    .eq('user_email', userEmail)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    // If table doesn't exist, return empty array
+    if (error.code === '42P01') {
+      console.log('Performance analytics table does not exist');
+      return [];
+    }
+    throw error;
+  }
   return data;
 }
 
@@ -368,16 +389,16 @@ export async function getPerformanceAnalyticsByInterview(interviewId) {
   
   // Get detailed performance analytics for a specific interview
   const { data, error } = await supabase
-    .from('performanceanalytics')
+    .from('performance_analytics')
     .select(`
       *,
-      Interviews!inner(
+      interviews!inner(
         interview_id,
-        jobPosition,
+        job_position,
         duration,
         status,
         created_at,
-        scheduledDate
+        scheduled_date
       )
     `)
     .eq('interview_id', interviewId)
